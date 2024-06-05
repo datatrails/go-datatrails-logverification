@@ -1,0 +1,9 @@
+.local
+__debug_bin*
+build-times.log
+.skaffold-tags.json
+*.code-workspace
+**/test_results
+.bash_history
+.viminfo
+.cache
