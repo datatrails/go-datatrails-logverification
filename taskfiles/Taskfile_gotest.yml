@@ -1,0 +1,38 @@
+---
+# Tests written using go lang's 'go test' framework. Includes unit and integration tests
+
+version: '3'
+
+# Environment variables set for all commands.
+env_build: &env_build
+  # The GOCACHE in a linux container on Docker for windows MUST be on a linuxy
+  # file system
+  GOCACHE: /tmp/datatrails/merklelog
+
+vars:
+  UNITTEST_DIR: test_results
+  VERBOSE: ""
+
+tasks:
+  go:unit:
+    desc: "run unit tests"
+    dir: ../
+    vars:
+      GO_TEST_TAGS: '{{.GO_TEST_TAGS | default ""}}'
+      GO_MOD_DIRS:
+        sh: find . -type f -name 'go.mod'
+    cmds:
+      - for: { var: GO_MOD_DIRS, as: MODULE}
+        cmd: |
+          cd $(dirname {{.MODULE}})
+          mkdir -p {{.UNITTEST_DIR}}
+
+          go test \
+            {{.GO_TEST_TAGS}} \
+            -race \
+            -v \
+            -coverprofile={{.UNITTEST_DIR}}/main.out \
+            ./... \
+            2>&1 | go-junit-report -set-exit-code -debug.print-events > {{.UNITTEST_DIR}}/main.xml
+
+          gocov convert {{.UNITTEST_DIR}}/main.out > {{.UNITTEST_DIR}}/coverage.json

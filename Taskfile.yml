@@ -1,0 +1,53 @@
+---
+version: '3'
+
+includes:
+  codequality:
+    taskfile: ./taskfiles/Taskfile_codequality.yml
+    dir: ./taskfiles
+
+  gobuild:
+    taskfile: ./taskfiles/Taskfile_gobuild.yml
+    dir: ./taskfiles
+
+  gotest:
+    taskfile: ./taskfiles/Taskfile_gotest.yml
+    dir: ./taskfiles
+
+tasks:
+  default:
+    desc: defaults to listing the available task runes
+    cmds:
+      - cmd: |
+
+          task --list
+
+  build:fast:
+    desc: ensure go build works for all modules
+    cmds:
+      - task: gobuild:go:build
+
+  build:clean:
+    desc: ensure go build works for all modules
+    cmds:
+      - task: gobuild:go:build
+
+  format:
+    desc: formats the code correctly
+    cmds:
+      - task: codequality:format 
+
+  lint:
+    desc: lints the go code
+    cmds:
+      - task: codequality:lint 
+
+  go:modules:
+    desc: tidies the go modules
+    cmds: 
+      - task: codequality:modules
+
+  test:unit:
+    desc: run the unit tests
+    cmds:
+      - task: gotest:go:unit
