@@ -18,6 +18,27 @@ var (
 	ErrNilMassifContext = errors.New("nil massif context")
 )
 
+// handleMassifIndexErr handles the massifIndex error from the mmrIndex
+//
+//	based on whether we suppress NotLeaf node errors or not.
+//
+// If we want to suppress NotLeaf errors, return all errors but ErrNotLeaf
+//
+//	otherwise return all errors.
+func handleMassifIndexErr(err error, nonLeafNode bool) error {
+
+	if !nonLeafNode {
+		return err
+	}
+
+	if !errors.Is(err, massifs.ErrNotleaf) {
+		return err
+	}
+
+	// if we get here its a ErrNotLeaf and we want to suppress this error
+	return nil
+}
+
 // Massif gets the massif (blob) that contains the given mmrIndex, from azure blob storage
 //
 //	defined by the azblob configuration.
@@ -27,15 +48,9 @@ func Massif(mmrIndex uint64, massifReader massifs.MassifReader, tenantId string,
 
 	massifIndex, err := massifs.MassifIndexFromMMRIndex(massifHeight, mmrIndex)
 
-	// we don't want to suppress NotLeaf error for mmrIndex that are not leaf
-	//  nodes, so just surface any error.
-	if !massifOptions.nonLeafNode && err != nil {
-		return nil, err
-	}
-
-	// we want to suppress NotLeaf error for mmrIndexs that are not leaf
-	//   nodes.
-	if massifOptions.nonLeafNode && !errors.Is(err, massifs.ErrNotleaf) {
+	// handle the error and if we want to suppress NotLeaf errors
+	err = handleMassifIndexErr(err, massifOptions.nonLeafNode)
+	if err != nil {
 		return nil, err
 	}
 
