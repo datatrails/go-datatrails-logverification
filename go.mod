@@ -1,4 +1,4 @@
-module github.com/datatrails/go-datatrails-logverification/logverification
+module github.com/datatrails/go-datatrails-logverification
 
 go 1.22
 
