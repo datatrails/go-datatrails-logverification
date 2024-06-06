@@ -14,6 +14,8 @@ import (
 )
 
 // VerifyConsistency takes two log states, and verifies that log state B is appended onto log state A
+// MMRState is an abstraction, but it is assumed that logStateA comes from a local, trusted copy of the data
+// rather than a fresh download from DataTrails.
 //
 // NOTE: the log state's signatures are not verified in this function, it is expected that the signature verification
 // is done as a separate step to the consistency verification.
@@ -82,6 +84,9 @@ func VerifyConsistency(
 // context providing access to the current version of the log. It returns whether or not the
 // new version of the log is consistent with the previous version (i.e. it contains all of the
 // same nodes in the same positions.)
+//
+// It is assumed that in a production use case, massifContextBefore provides access to a trusted
+// local copy of the massif, rather than a fresh download from DataTrails.
 func VerifyConsistencyFromMassifs(
 	ctx context.Context,
 	verificationKey ecdsa.PublicKey,
