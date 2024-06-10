@@ -21,23 +21,9 @@ var (
 // Massif gets the massif (blob) that contains the given mmrIndex, from azure blob storage
 //
 //	defined by the azblob configuration.
-func Massif(mmrIndex uint64, massifReader massifs.MassifReader, tenantId string, massifHeight uint8, opts ...MassifOption) (*massifs.MassifContext, error) {
+func Massif(mmrIndex uint64, massifReader massifs.MassifReader, tenantId string, massifHeight uint8) (*massifs.MassifContext, error) {
 
-	massifOptions := ParseMassifOptions(opts...)
-
-	massifIndex, err := massifs.MassifIndexFromMMRIndex(massifHeight, mmrIndex)
-
-	// we don't want to suppress NotLeaf error for mmrIndex that are not leaf
-	//  nodes, so just surface any error.
-	if !massifOptions.nonLeafNode && err != nil {
-		return nil, err
-	}
-
-	// we want to suppress NotLeaf error for mmrIndexs that are not leaf
-	//   nodes.
-	if massifOptions.nonLeafNode && !errors.Is(err, massifs.ErrNotleaf) {
-		return nil, err
-	}
+	massifIndex := massifs.MassifIndexFromMMRIndex(massifHeight, mmrIndex)
 
 	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
 	defer cancel()

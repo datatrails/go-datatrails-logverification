@@ -41,13 +41,13 @@ func VerifyConsistency(
 	massifReader := massifs.NewMassifReader(logger.Sugar, reader)
 
 	// last massif in the merkle log for log state A
-	massifContextA, err := Massif(logStateA.MMRSize-1, massifReader, tenantID, DefaultMassifHeight, WithNonLeafNode(true))
+	massifContextA, err := Massif(logStateA.MMRSize-1, massifReader, tenantID, DefaultMassifHeight)
 	if err != nil {
 		return false, fmt.Errorf("VerifyConsistency failed: unable to get the last massif for log state A: %w", err)
 	}
 
 	// last massif in the merkle log for log state B
-	massifContextB, err := Massif(logStateB.MMRSize-1, massifReader, tenantID, DefaultMassifHeight, WithNonLeafNode(true))
+	massifContextB, err := Massif(logStateB.MMRSize-1, massifReader, tenantID, DefaultMassifHeight)
 	if err != nil {
 		return false, fmt.Errorf("VerifyConsistency failed: unable to get the last massif for log state B: %w", err)
 	}
