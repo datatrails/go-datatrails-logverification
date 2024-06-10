@@ -10,10 +10,10 @@ version: '3'
 vars:
   # AZURITE_DATA_DIR the --location option for azurite is where data is persisted
   AZURITE_DATA_DIR: '{{.AZURITE_DATA_DIR | default "../.local/azurite-data"}}'
-  AZURITE_BLOB_PORT: '{{.AZURITE_BLOB_PORT | default "10010"}}'
-  AZURITE_QUEUE_PORT: '{{.AZURITE_QUEUE_PORT | default "10011"}}'
-  AZURITE_TABLE_PORT: '{{.AZURITE_TABLE_PORT | default "11121"}}'
-  AZURITE_CONTAINER_NAME: '{{.AZURITE_CONTAINER_NAME | default "logverification-azurite"}}'
+  AZURITE_BLOB_PORT: '{{.AZURITE_BLOB_PORT | default "10000"}}'
+  AZURITE_QUEUE_PORT: '{{.AZURITE_QUEUE_PORT | default "10001"}}'
+  AZURITE_TABLE_PORT: '{{.AZURITE_TABLE_PORT | default "11111"}}'
+  AZURITE_CONTAINER_NAME: '{{.AZURITE_CONTAINER_NAME | default "forestrie-azurite"}}'
   AZURITE_IMAGE: '{{.AZURITE_IMAGE | default "mcr.microsoft.com/azure-storage/azurite"}}'
 
 tasks:
@@ -33,7 +33,7 @@ tasks:
       The following env vars are respected for configuration
 
       AZURITE_CONTAINER_NAME:
-        The container name to use, default "logverification-azurite"
+        The container name to use, default "forestrie-azurite"
       AZURITE_DATA_DIR:
         Where the data is persisted, default ".local/azurite-data"
       AZURITE_BLOB_PORT:
