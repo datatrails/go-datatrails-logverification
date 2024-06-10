@@ -44,15 +44,15 @@ jobs:
           # Note: it is by design that we don't use the builder
           task test:unit
 
-      # - name: Integration tests
-      #   run: |
-      #     task test:integration
+      - name: Integration tests
+        run: |
+          task test:integration
 
-      # - name:  Azurite logs
-      #   run: |
-      #     task azurite:logs
+      - name:  Azurite logs
+        run: |
+          task azurite:logs
 
-      # - name: Stop azurite
-      #   if: always()
-      #   run: |
-      #     task azurite:stop
+      - name: Stop azurite
+        if: always()
+        run: |
+          task azurite:stop
