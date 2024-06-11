@@ -4,9 +4,14 @@ package logverification
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/sha256"
+	"hash"
 	"testing"
 
+	"github.com/datatrails/go-datatrails-common/cbor"
+	"github.com/datatrails/go-datatrails-common/cose"
 	"github.com/datatrails/go-datatrails-logverification/integrationsupport"
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
 	"github.com/stretchr/testify/require"
@@ -52,38 +57,75 @@ import (
 //	/ \   / \   / \   /  \   /  \
 //
 // 0   1 3   4 7   8 10  11 15  16  18 <- Leaf Nodes
-func TestVerifyConsistency(t *testing.T) {
-	testContext, testGenerator, _ := integrationsupport.NewAzuriteTestContext(t, "TestVerifyConsistency")
 
-	// - Public key to verify the signature of the signed state (ephemeral keys are used for this demo)
-	// - Massif context that represents the backed-up merkle log data for a point in the past (containing 7 events)
-	// - Massif context that represents the head of the log (after 4 additional events appended)
-	//
-	// (!) A MassifContext provides access to the log entries in a single massif. A massif is a
-	// logical chunk of the merkle log, stored in an Azure blob.
-	publicVerificationKey, backupMassifContext, newMassifContext := integrationsupport.SetupTest(t, testContext, testGenerator)
-
-	hasher := sha256.New()
-	codec, err := massifs.NewRootSignerCodec()
-	require.NoError(t, err)
-
-	signedState, err := SignedLogState(
-		context.Background(), testContext.Storer, hasher, codec,
-		mmrtesting.DefaultGeneratorTenantIdentity, 0,
-	)
-	require.NoError(t, err)
-
-	signatureVerificationErr := signedState.VerifyWithPublicKey(&publicVerificationKey, nil)
-	require.NoError(t, signatureVerificationErr)
-
-	logState, err := LogState(signedState, codec)
-	require.NoError(t, err)
-
-	verified, err := VerifyConsistencyFromMassifs(
-		context.Background(), publicVerificationKey, hasher, testContext.Storer, &backupMassifContext,
-		&newMassifContext, logState,
-	)
-	require.NoError(t, err)
-
-	require.True(t, verified)
+type TestLogBuilder struct {
+	t          *testing.T
+	tctx       mmrtesting.TestContext
+	tgen       integrationsupport.TestGenerator
+	signingKey ecdsa.PrivateKey
+	hasher     hash.Hash
+	codec      cbor.CBORCodec
 }
+
+// AppendToLog appends `newEventCount` test events to the log for `tenantID`, generates a seal
+// and returns both the signed state and the reconstructed log state.
+func (b *TestLogBuilder) AppendToLog(tenantID string, newEventCount int, clearBlobs bool) (*cose.CoseSign1Message, *massifs.MMRState) {
+	events := integrationsupport.GenerateTenantLog(
+		&b.tctx, b.tgen, newEventCount, tenantID, clearBlobs,
+		integrationsupport.TestMassifHeight,
+	)
+	integrationsupport.GenerateMassifSeal(b.t, b.tctx, events[len(events)-1], b.signingKey)
+
+	signedState, err := SignedLogState(context.Background(), b.tctx.Storer, b.hasher, b.codec, tenantID, 0)
+	require.NoError(b.t, err)
+
+	logState, err := LogState(signedState, b.codec)
+	require.NoError(b.t, err)
+
+	return signedState, logState
+}
+
+func (b *TestLogBuilder) VerifyConsistencyBetween(fromState *massifs.MMRState, toState *massifs.MMRState, inTenant string) bool {
+	result, err := VerifyConsistency(
+		context.Background(), b.hasher, b.tctx.Storer, inTenant, fromState, toState,
+	)
+
+	require.NoError(b.t, err)
+	return result
+}
+
+// B extends A
+// A !extends B
+func TestConsistencyVerificationUnidirectionality(t *testing.T) {
+	var err error
+	testLogBuilder := TestLogBuilder{
+		t:          t,
+		signingKey: massifs.TestGenerateECKey(t, elliptic.P256()),
+		hasher:     sha256.New(),
+	}
+
+	testLogBuilder.codec, err = massifs.NewRootSignerCodec()
+	require.NoError(t, err)
+	testLogBuilder.tctx, testLogBuilder.tgen, _ = integrationsupport.NewAzuriteTestContext(t, "TestVerifyConsistency")
+	tenantID := mmrtesting.DefaultGeneratorTenantIdentity
+
+	_, logStateA := testLogBuilder.AppendToLog(tenantID, 2, true)
+	signedStateA2, logStateA2 := testLogBuilder.AppendToLog(tenantID, 1, false)
+
+	sigVerErr := signedStateA2.VerifyWithPublicKey(&testLogBuilder.signingKey.PublicKey, nil)
+	require.NoError(t, sigVerErr)
+
+	// logStateA contains 2 events and logStateB extends that by 1 event.
+
+	// A is a subset of A2, so we expect consistency here.
+	result := testLogBuilder.VerifyConsistencyBetween(logStateA, logStateA2, tenantID)
+	require.True(t, result)
+
+	// A2 is a superset of A, so consistency verification must fail if we reverse the states.
+	result = testLogBuilder.VerifyConsistencyBetween(logStateA2, logStateA, tenantID)
+	require.False(t, result)
+}
+
+// TODO:
+// B !extends A'
+// Signature verification failures
