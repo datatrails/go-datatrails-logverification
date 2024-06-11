@@ -7,19 +7,10 @@ import (
 	"crypto/sha256"
 	"testing"
 
-	"crypto/ecdsa"
-	"errors"
-	"fmt"
-	"hash"
-
 	"github.com/datatrails/go-datatrails-logverification/integrationsupport"
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
 	"github.com/stretchr/testify/require"
 
-	"github.com/datatrails/go-datatrails-common/azblob"
-	"github.com/datatrails/go-datatrails-common/cbor"
-	"github.com/datatrails/go-datatrails-common/logger"
-	"github.com/datatrails/go-datatrails-merklelog/mmr"
 	"github.com/datatrails/go-datatrails-merklelog/mmrtesting"
 )
 
@@ -33,6 +24,34 @@ import (
 //     and at the same positions, and you can trust this as the new head of the log.
 //  3. Get the hashes of peaks in your trusted log state and verify using a consistency proof based
 //     on a published signed state.
+
+// Then we verify the consistency of the data between our previously trusted log state
+// (accessible through backupMassifContext) and the current state (accessible through
+// newMassifContext.)
+
+// backupMassifContext points to the following merkle log with 7 leaves.
+//
+//	    6
+//	  /   \
+//	 2     5     9
+//	/ \   / \   / \
+// 0   1 3   4 7   8 10   <- Leaf Nodes
+
+// newMassifContext points to the following merkle log with 11 leaves. You can see the exact
+// structure of backupMassifContext within it (ending at leaf mmr index 10.) This illustrates
+// what it means for the merkle trees to be consistent.
+//
+//	         14
+//	        /  \
+//	       /    \
+//	      /      \
+//	     /        \
+//	    6          13
+//	  /   \       /   \
+//	 2     5     9     12     17
+//	/ \   / \   / \   /  \   /  \
+//
+// 0   1 3   4 7   8 10  11 15  16  18 <- Leaf Nodes
 func TestVerifyConsistency(t *testing.T) {
 	testContext, testGenerator, _ := integrationsupport.NewAzuriteTestContext(t, "TestVerifyConsistency")
 
@@ -48,83 +67,23 @@ func TestVerifyConsistency(t *testing.T) {
 	codec, err := massifs.NewRootSignerCodec()
 	require.NoError(t, err)
 
-	// First we verify the signature. In order to trust the data, we want to see that DataTrails has
-	// committed to the state of the merkle log by signing it.
-	logStateNow, signatureVerificationErr := verifySignature(
-		context.Background(), publicVerificationKey, hasher, codec, testContext.Storer,
-		&newMassifContext,
+	signedState, err := SignedLogState(
+		context.Background(), testContext.Storer, hasher, codec,
+		mmrtesting.DefaultGeneratorTenantIdentity, 0,
 	)
+	require.NoError(t, err)
+
+	signatureVerificationErr := signedState.VerifyWithPublicKey(&publicVerificationKey, nil)
 	require.NoError(t, signatureVerificationErr)
 
-	// Then we verify the consistency of the data between our previously trusted log state
-	// (accessible through backupMassifContext) and the current state (accessible through
-	// newMassifContext.)
+	logState, err := LogState(signedState, codec)
+	require.NoError(t, err)
 
-	// backupMassifContext points to the following merkle log with 7 leaves.
-	//
-	//	    6
-	//	  /   \
-	//	 2     5     9
-	//	/ \   / \   / \
-	// 0   1 3   4 7   8 10   <- Leaf Nodes
-
-	// newMassifContext points to the following merkle log with 11 leaves. You can see the exact
-	// structure of backupMassifContext within it (ending at leaf mmr index 10.) This illustrates
-	// what it means for the merkle trees to be consistent.
-	//
-	//	         14
-	//	        /  \
-	//	       /    \
-	//	      /      \
-	//	     /        \
-	//	    6          13
-	//	  /   \       /   \
-	//	 2     5     9     12     17
-	//	/ \   / \   / \   /  \   /  \
-	// 0   1 3   4 7   8 10  11 15  16  18 <- Leaf Nodes
 	verified, err := VerifyConsistencyFromMassifs(
 		context.Background(), publicVerificationKey, hasher, testContext.Storer, &backupMassifContext,
-		&newMassifContext, logStateNow,
+		&newMassifContext, logState,
 	)
 	require.NoError(t, err)
 
 	require.True(t, verified)
-}
-
-func verifySignature(
-	ctx context.Context,
-	verificationKey ecdsa.PublicKey,
-	hasher hash.Hash,
-	codec cbor.CBORCodec,
-	blobReader azblob.Reader,
-	massifContextNow *massifs.MassifContext,
-) (*massifs.MMRState, error) {
-	sealReader := massifs.NewSignedRootReader(logger.Sugar, blobReader, codec)
-
-	// Fetch the latest signed state of the log
-	signedStateNow, logStateNow, err := sealReader.GetLatestMassifSignedRoot(ctx, mmrtesting.DefaultGeneratorTenantIdentity, 0)
-	if err != nil {
-		return nil, fmt.Errorf("verifySignature failed: unable to get latest signed root: %w", err)
-	}
-
-	// The log state at time of sealing is the Payload. It included the root, but this is removed
-	// from the stored log state. This forces a verifier to recompute the merkle root from their view
-	// of the data. If verification succeeds when this computed root is added to signedStateNow, then
-	// we can be confident that DataTrails signed this state, and that the root matches your data.
-	logStateNow.Root, err = mmr.GetRoot(logStateNow.MMRSize, massifContextNow, hasher)
-	if err != nil {
-		return nil, fmt.Errorf("VerifyConsistency failed: unable to get root for massifContextNow: %w", err)
-	}
-
-	signedStateNow.Payload, err = codec.MarshalCBOR(logStateNow)
-	if err != nil {
-		return nil, errors.New("error")
-	}
-
-	signatureVerificationError := signedStateNow.VerifyWithPublicKey(&verificationKey, nil)
-	if signatureVerificationError != nil {
-		return nil, fmt.Errorf("VerifyConsistency failed: signature verification failed: %w", err)
-	}
-
-	return &logStateNow, nil
 }
