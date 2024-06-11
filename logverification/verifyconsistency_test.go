@@ -10,6 +10,7 @@ import (
 	"hash"
 	"testing"
 
+	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
 	"github.com/datatrails/go-datatrails-common/cbor"
 	"github.com/datatrails/go-datatrails-common/cose"
 	"github.com/datatrails/go-datatrails-logverification/integrationsupport"
@@ -58,7 +59,7 @@ import (
 //
 // 0   1 3   4 7   8 10  11 15  16  18 <- Leaf Nodes
 
-type TestLogBuilder struct {
+type TestLogHelper struct {
 	t          *testing.T
 	tctx       mmrtesting.TestContext
 	tgen       integrationsupport.TestGenerator
@@ -69,7 +70,7 @@ type TestLogBuilder struct {
 
 // AppendToLog appends `newEventCount` test events to the log for `tenantID`, generates a seal
 // and returns both the signed state and the reconstructed log state.
-func (b *TestLogBuilder) AppendToLog(tenantID string, newEventCount int, clearBlobs bool) (*cose.CoseSign1Message, *massifs.MMRState) {
+func (b *TestLogHelper) AppendToLog(tenantID string, newEventCount int, clearBlobs bool) (*cose.CoseSign1Message, *massifs.MMRState, []*assets.EventResponse) {
 	events := integrationsupport.GenerateTenantLog(
 		&b.tctx, b.tgen, newEventCount, tenantID, clearBlobs,
 		integrationsupport.TestMassifHeight,
@@ -82,10 +83,10 @@ func (b *TestLogBuilder) AppendToLog(tenantID string, newEventCount int, clearBl
 	logState, err := LogState(signedState, b.codec)
 	require.NoError(b.t, err)
 
-	return signedState, logState
+	return signedState, logState, events
 }
 
-func (b *TestLogBuilder) VerifyConsistencyBetween(fromState *massifs.MMRState, toState *massifs.MMRState, inTenant string) bool {
+func (b *TestLogHelper) VerifyConsistencyBetween(fromState *massifs.MMRState, toState *massifs.MMRState, inTenant string) bool {
 	result, err := VerifyConsistency(
 		context.Background(), b.hasher, b.tctx.Storer, inTenant, fromState, toState,
 	)
@@ -94,11 +95,47 @@ func (b *TestLogBuilder) VerifyConsistencyBetween(fromState *massifs.MMRState, t
 	return result
 }
 
-// B extends A
-// A !extends B
+// TestConsistencyVerificationUnidirectionality checks that consistency proofs work as expected in
+// the happy case. It also examines a couple of ordering edge cases.
 func TestConsistencyVerificationUnidirectionality(t *testing.T) {
 	var err error
-	testLogBuilder := TestLogBuilder{
+	helper := TestLogHelper{
+		t:          t,
+		signingKey: massifs.TestGenerateECKey(t, elliptic.P256()),
+		hasher:     sha256.New(),
+	}
+
+	helper.codec, err = massifs.NewRootSignerCodec()
+	require.NoError(t, err)
+	helper.tctx, helper.tgen, _ = integrationsupport.NewAzuriteTestContext(t, "TestVerifyConsistency")
+	tenantID := mmrtesting.DefaultGeneratorTenantIdentity
+
+	_, logStateA, _ := helper.AppendToLog(tenantID, 2, true)
+	signedStateA2, logStateA2, _ := helper.AppendToLog(tenantID, 1, false)
+
+	sigVerErr := signedStateA2.VerifyWithPublicKey(&helper.signingKey.PublicKey, nil)
+	require.NoError(t, sigVerErr)
+
+	// logStateA contains 2 events and logStateB extends that by 1 event.
+
+	// A is a subset of A2, so we expect consistency here.
+	result := helper.VerifyConsistencyBetween(logStateA, logStateA2, tenantID)
+	require.True(t, result)
+
+	// A2 is a superset of A, so consistency verification must fail if we reverse the states.
+	result = helper.VerifyConsistencyBetween(logStateA2, logStateA, tenantID)
+	require.False(t, result)
+
+	// A2 is a (non-strict) subset of A2, so consistency verification should succeed
+	result = helper.VerifyConsistencyBetween(logStateA2, logStateA2, tenantID)
+	require.True(t, result)
+}
+
+// TestSignatureVerificationFailsIfTampered checks that our signature verification methods do
+// actually fail when signature is tampered with, for real seal data.
+func TestSignatureVerificationFailsIfTampered(t *testing.T) {
+	var err error
+	testLogBuilder := TestLogHelper{
 		t:          t,
 		signingKey: massifs.TestGenerateECKey(t, elliptic.P256()),
 		hasher:     sha256.New(),
@@ -109,23 +146,11 @@ func TestConsistencyVerificationUnidirectionality(t *testing.T) {
 	testLogBuilder.tctx, testLogBuilder.tgen, _ = integrationsupport.NewAzuriteTestContext(t, "TestVerifyConsistency")
 	tenantID := mmrtesting.DefaultGeneratorTenantIdentity
 
-	_, logStateA := testLogBuilder.AppendToLog(tenantID, 2, true)
-	signedStateA2, logStateA2 := testLogBuilder.AppendToLog(tenantID, 1, false)
-
-	sigVerErr := signedStateA2.VerifyWithPublicKey(&testLogBuilder.signingKey.PublicKey, nil)
+	signedState, _, _ := testLogBuilder.AppendToLog(tenantID, 2, true)
+	sigVerErr := signedState.VerifyWithPublicKey(&testLogBuilder.signingKey.PublicKey, nil)
 	require.NoError(t, sigVerErr)
 
-	// logStateA contains 2 events and logStateB extends that by 1 event.
-
-	// A is a subset of A2, so we expect consistency here.
-	result := testLogBuilder.VerifyConsistencyBetween(logStateA, logStateA2, tenantID)
-	require.True(t, result)
-
-	// A2 is a superset of A, so consistency verification must fail if we reverse the states.
-	result = testLogBuilder.VerifyConsistencyBetween(logStateA2, logStateA, tenantID)
-	require.False(t, result)
+	signedState.Payload[0] = 'z'
+	sigVerErr = signedState.VerifyWithPublicKey(&testLogBuilder.signingKey.PublicKey, nil)
+	require.Error(t, sigVerErr)
 }
-
-// TODO:
-// B !extends A'
-// Signature verification failures
