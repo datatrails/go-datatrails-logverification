@@ -14,6 +14,31 @@ vars:
   VERBOSE: ""
 
 tasks:
+  go:azurite:
+      desc: "run integration tests which depend only on azurite"
+      dir: ../
+      vars:
+        # empty or -tag tag1,tag2 ...
+        GO_TEST_TAGS: '{{.GO_TEST_TAGS | default "-tags integration,azurite"}}'
+        GO_MOD_DIRS:
+          sh: find . -type f -name 'go.mod'
+
+      cmds:
+        - for: { var: GO_MOD_DIRS}
+          cmd: |
+            cd $(dirname {{.ITEM}})
+            mkdir -p {{.UNITTEST_DIR}}
+
+            go test \
+              {{.GO_TEST_TAGS}} \
+              -race \
+              -v \
+              -coverprofile={{.UNITTEST_DIR}}/main.out \
+              ./... \
+              2>&1 | go-junit-report -set-exit-code -debug.print-events > {{.UNITTEST_DIR}}/main.xml
+
+            gocov convert {{.UNITTEST_DIR}}/main.out > {{.UNITTEST_DIR}}/coverage.json
+
   go:unit:
     desc: "run unit tests"
     dir: ../

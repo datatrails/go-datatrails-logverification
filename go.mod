@@ -7,8 +7,10 @@ require (
 	github.com/datatrails/go-datatrails-common-api-gen v0.4.5
 	github.com/datatrails/go-datatrails-merklelog/massifs v0.0.10
 	github.com/datatrails/go-datatrails-merklelog/mmr v0.0.2
+	github.com/datatrails/go-datatrails-merklelog/mmrtesting v0.0.1
 	github.com/datatrails/go-datatrails-simplehash v0.0.3
 	github.com/stretchr/testify v1.9.0
+	github.com/veraison/go-cose v1.1.0
 	google.golang.org/protobuf v1.34.1
 )
 
@@ -29,7 +31,6 @@ require (
 	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
-	github.com/datatrails/go-datatrails-merklelog/mmrtesting v0.0.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.0.4 // indirect
@@ -46,7 +47,6 @@ require (
 	github.com/openzipkin-contrib/zipkin-go-opentracing v0.5.0 // indirect
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/veraison/go-cose v1.1.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zeebo/bencode v1.0.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
