@@ -76,7 +76,7 @@ func TestVerifyList_OmmittedEventReturned(t *testing.T) {
 	eventJsonList := serializeTestEvents(t, trimmedGeneratedEvents)
 	omittedIndices, err := VerifyList(testContext.Storer, eventJsonList)
 
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Len(t, omittedIndices, 1)
 	require.Equal(t, omittedIndices[0], uint64(4))
 }
@@ -99,7 +99,7 @@ func TestVerifyList_MultipleOmittedEventsReturned(t *testing.T) {
 	eventJsonList := serializeTestEvents(t, trimmedGeneratedEvents)
 	omittedIndices, err := VerifyList(testContext.Storer, eventJsonList)
 
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Len(t, omittedIndices, 2)
 	require.Equal(t, omittedIndices[0], uint64(4))
 	require.Equal(t, omittedIndices[1], uint64(7))
@@ -122,12 +122,12 @@ func TestVerifyList_TamperedEventContent_ShouldError(t *testing.T) {
 	eventJsonList := serializeTestEvents(t, generatedEvents)
 	_, err := VerifyList(testContext.Storer, eventJsonList)
 
-	require.Error(t, err)
+	require.ErrorIs(t, err, ErrEventNotOnLeaf)
 }
 
-// TestVerifyList_ExtraEvent_ShouldError shows that an extra event at an intermediate node position
+// TestVerifyList_IntermediateNode_ShouldError shows that an extra event at an intermediate node position
 // should cause a verification failure.
-func TestVerifyList_ExtraEvent_ShouldError(t *testing.T) {
+func TestVerifyList_IntermediateNode_ShouldError(t *testing.T) {
 	logger.New("TestVerifyList")
 	defer logger.OnExit()
 
@@ -137,15 +137,14 @@ func TestVerifyList_ExtraEvent_ShouldError(t *testing.T) {
 		&testContext, testGenerator, 8, tenantID, true, integrationsupport.TestMassifHeight,
 	)
 
+	// Insert an event with a commit index on an intermediate node
 	dodgyEvent := generatedEvents[0]
-	dodgyEvent.MerklelogEntry.Commit.Index = 2 // Intermediate node
-
-	// Modify one of the logged events
+	dodgyEvent.MerklelogEntry.Commit.Index = 2
 	eventsWithExtra := append(generatedEvents[:2], dodgyEvent)
 	eventsWithExtra = append(eventsWithExtra, generatedEvents[2:]...)
 
 	eventJsonList := serializeTestEvents(t, eventsWithExtra)
 	_, err := VerifyList(testContext.Storer, eventJsonList)
 
-	require.Error(t, err)
+	require.ErrorIs(t, err, ErrIntermediateNode)
 }
