@@ -61,7 +61,9 @@ func TestVerifyListIntegration(t *testing.T) {
 	//  events api to list events filtered by mmr index.
 }
 
-func TestVerifyListOmmitted(t *testing.T) {
+// TestVerifyList_OmmittedEventReturned shows that, when verifying a list of API events against
+// the merkle log, that the right event is returned.
+func TestVerifyList_OmmittedEventReturned(t *testing.T) {
 	logger.New("TestVerifyList")
 	defer logger.OnExit()
 
@@ -70,15 +72,42 @@ func TestVerifyListOmmitted(t *testing.T) {
 	generatedEvents := integrationsupport.GenerateTenantLog(
 		&testContext, testGenerator, 8, tenantID, true, integrationsupport.TestMassifHeight,
 	)
-	trimmedGeneratedEvents := generatedEvents[1:]
+	trimmedGeneratedEvents := append(generatedEvents[:3], generatedEvents[4:]...)
 	eventJsonList := serializeTestEvents(t, trimmedGeneratedEvents)
 	omittedIndices, err := VerifyList(testContext.Storer, eventJsonList)
 
 	require.Nil(t, err)
 	require.Len(t, omittedIndices, 1)
+	require.Equal(t, omittedIndices[0], uint64(4))
 }
 
-func TestVerifyListModifiedShouldError(t *testing.T) {
+// TestVerifyList_MultipleOmittedEventsReturned shows that when multiple events are in the merkle
+// log but not in the set of events, they are all returned.
+// Note: The events are dropped from the middle, since "omitted" events are gaps in the middle of a
+// range of events. The range it looks over for omitted events is based on the set of events its
+// passed.
+func TestVerifyList_MultipleOmittedEventsReturned(t *testing.T) {
+	logger.New("TestVerifyList")
+	defer logger.OnExit()
+
+	testContext, testGenerator, _ := integrationsupport.NewAzuriteTestContext(t, "TestVerifyList")
+	tenantID := mmrtesting.DefaultGeneratorTenantIdentity
+	generatedEvents := integrationsupport.GenerateTenantLog(
+		&testContext, testGenerator, 8, tenantID, true, integrationsupport.TestMassifHeight,
+	)
+	trimmedGeneratedEvents := append(generatedEvents[:3], generatedEvents[5:]...)
+	eventJsonList := serializeTestEvents(t, trimmedGeneratedEvents)
+	omittedIndices, err := VerifyList(testContext.Storer, eventJsonList)
+
+	require.Nil(t, err)
+	require.Len(t, omittedIndices, 2)
+	require.Equal(t, omittedIndices[0], uint64(4))
+	require.Equal(t, omittedIndices[1], uint64(7))
+}
+
+// TestVerifyList_TamperedEventContent_ShouldError shows that a modification to the content of
+// a committed event causes a verification failure.
+func TestVerifyList_TamperedEventContent_ShouldError(t *testing.T) {
 	logger.New("TestVerifyList")
 	defer logger.OnExit()
 
@@ -91,6 +120,31 @@ func TestVerifyListModifiedShouldError(t *testing.T) {
 	// Modify one of the logged events
 	generatedEvents[5].EventAttributes["additional"] = attribute.NewStringAttribute("foobar")
 	eventJsonList := serializeTestEvents(t, generatedEvents)
+	_, err := VerifyList(testContext.Storer, eventJsonList)
+
+	require.Error(t, err)
+}
+
+// TestVerifyList_ExtraEvent_ShouldError shows that an extra event at an intermediate node position
+// should cause a verification failure.
+func TestVerifyList_ExtraEvent_ShouldError(t *testing.T) {
+	logger.New("TestVerifyList")
+	defer logger.OnExit()
+
+	testContext, testGenerator, _ := integrationsupport.NewAzuriteTestContext(t, "TestVerifyList")
+	tenantID := mmrtesting.DefaultGeneratorTenantIdentity
+	generatedEvents := integrationsupport.GenerateTenantLog(
+		&testContext, testGenerator, 8, tenantID, true, integrationsupport.TestMassifHeight,
+	)
+
+	dodgyEvent := generatedEvents[0]
+	dodgyEvent.MerklelogEntry.Commit.Index = 2 // Intermediate node
+
+	// Modify one of the logged events
+	eventsWithExtra := append(generatedEvents[:2], dodgyEvent)
+	eventsWithExtra = append(eventsWithExtra, generatedEvents[2:]...)
+
+	eventJsonList := serializeTestEvents(t, eventsWithExtra)
 	_, err := VerifyList(testContext.Storer, eventJsonList)
 
 	require.Error(t, err)
