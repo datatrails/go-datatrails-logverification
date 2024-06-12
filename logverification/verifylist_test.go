@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
+	"github.com/datatrails/go-datatrails-common-api-gen/attribute/v2/attribute"
 	"github.com/datatrails/go-datatrails-common/logger"
 	"github.com/datatrails/go-datatrails-logverification/integrationsupport"
 	"github.com/datatrails/go-datatrails-merklelog/mmrtesting"
@@ -15,16 +16,13 @@ import (
 	// DataTrails Merkle log.
 )
 
-func generateTestEvents(t *testing.T, count int, testContext mmrtesting.TestContext, testGenerator integrationsupport.TestGenerator, massifHeight uint8) []byte {
-	tenantID := mmrtesting.DefaultGeneratorTenantIdentity
-	generatedEvents := integrationsupport.GenerateTenantLog(&testContext, testGenerator, count, tenantID, true, massifHeight)
-	marshaller := assets.NewFlatMarshalerForEvents()
-
-	events := assets.ListEventsResponse{
-		Events: generatedEvents,
+func serializeTestEvents(t *testing.T, events []*assets.EventResponse) []byte {
+	wrappedEvents := assets.ListEventsResponse{
+		Events: events,
 	}
 
-	eventsJson, err := marshaller.Marshal(&events)
+	marshaller := assets.NewFlatMarshalerForEvents()
+	eventsJson, err := marshaller.Marshal(&wrappedEvents)
 	require.Nil(t, err)
 
 	return eventsJson
@@ -36,7 +34,11 @@ func TestVerifyListIntegration(t *testing.T) {
 
 	// We're generating test events here, but you could also use data retrieved from the events API.
 	testContext, testGenerator, _ := integrationsupport.NewAzuriteTestContext(t, "TestVerifyList")
-	eventJsonList := generateTestEvents(t, 8, testContext, testGenerator, integrationsupport.TestMassifHeight)
+	tenantID := mmrtesting.DefaultGeneratorTenantIdentity
+	generatedEvents := integrationsupport.GenerateTenantLog(
+		&testContext, testGenerator, 8, tenantID, true, integrationsupport.TestMassifHeight,
+	)
+	eventJsonList := serializeTestEvents(t, generatedEvents)
 
 	// massifHeight = 3, leaves = 8, so the first 4 leaves are in massif 0, and the others are in
 	// massif 1
@@ -57,4 +59,39 @@ func TestVerifyListIntegration(t *testing.T) {
 	// In order to get the pre-image data (event json) for events on the log, but not
 	//  in the given list of events, i.e. omitted events. We can call the datatrails
 	//  events api to list events filtered by mmr index.
+}
+
+func TestVerifyListOmmitted(t *testing.T) {
+	logger.New("TestVerifyList")
+	defer logger.OnExit()
+
+	testContext, testGenerator, _ := integrationsupport.NewAzuriteTestContext(t, "TestVerifyList")
+	tenantID := mmrtesting.DefaultGeneratorTenantIdentity
+	generatedEvents := integrationsupport.GenerateTenantLog(
+		&testContext, testGenerator, 8, tenantID, true, integrationsupport.TestMassifHeight,
+	)
+	trimmedGeneratedEvents := generatedEvents[1:]
+	eventJsonList := serializeTestEvents(t, trimmedGeneratedEvents)
+	omittedIndices, err := VerifyList(testContext.Storer, eventJsonList)
+
+	require.Nil(t, err)
+	require.Len(t, omittedIndices, 1)
+}
+
+func TestVerifyListModifiedShouldError(t *testing.T) {
+	logger.New("TestVerifyList")
+	defer logger.OnExit()
+
+	testContext, testGenerator, _ := integrationsupport.NewAzuriteTestContext(t, "TestVerifyList")
+	tenantID := mmrtesting.DefaultGeneratorTenantIdentity
+	generatedEvents := integrationsupport.GenerateTenantLog(
+		&testContext, testGenerator, 8, tenantID, true, integrationsupport.TestMassifHeight,
+	)
+
+	// Modify one of the logged events
+	generatedEvents[5].EventAttributes["additional"] = attribute.NewStringAttribute("foobar")
+	eventJsonList := serializeTestEvents(t, generatedEvents)
+	_, err := VerifyList(testContext.Storer, eventJsonList)
+
+	require.Error(t, err)
 }
