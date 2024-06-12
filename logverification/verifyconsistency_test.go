@@ -4,22 +4,19 @@ package logverification
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/sha256"
+	"hash"
 	"testing"
 
-	"crypto/ecdsa"
-	"errors"
-	"fmt"
-	"hash"
-
+	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
+	"github.com/datatrails/go-datatrails-common/cbor"
+	"github.com/datatrails/go-datatrails-common/cose"
 	"github.com/datatrails/go-datatrails-logverification/integrationsupport"
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
 	"github.com/stretchr/testify/require"
 
-	"github.com/datatrails/go-datatrails-common/azblob"
-	"github.com/datatrails/go-datatrails-common/cbor"
-	"github.com/datatrails/go-datatrails-common/logger"
-	"github.com/datatrails/go-datatrails-merklelog/mmr"
 	"github.com/datatrails/go-datatrails-merklelog/mmrtesting"
 )
 
@@ -33,98 +30,127 @@ import (
 //     and at the same positions, and you can trust this as the new head of the log.
 //  3. Get the hashes of peaks in your trusted log state and verify using a consistency proof based
 //     on a published signed state.
-func TestVerifyConsistency(t *testing.T) {
-	testContext, testGenerator, _ := integrationsupport.NewAzuriteTestContext(t, "TestVerifyConsistency")
 
-	// - Public key to verify the signature of the signed state (ephemeral keys are used for this demo)
-	// - Massif context that represents the backed-up merkle log data for a point in the past (containing 7 events)
-	// - Massif context that represents the head of the log (after 4 additional events appended)
-	//
-	// (!) A MassifContext provides access to the log entries in a single massif. A massif is a
-	// logical chunk of the merkle log, stored in an Azure blob.
-	publicVerificationKey, backupMassifContext, newMassifContext := integrationsupport.SetupTest(t, testContext, testGenerator)
+// Then we verify the consistency of the data between our previously trusted log state
+// (accessible through backupMassifContext) and the current state (accessible through
+// newMassifContext.)
 
-	hasher := sha256.New()
-	codec, err := massifs.NewRootSignerCodec()
-	require.NoError(t, err)
+// backupMassifContext points to the following merkle log with 7 leaves.
+//
+//	    6
+//	  /   \
+//	 2     5     9
+//	/ \   / \   / \
+//     0   1 3   4 7   8 10   <- Leaf Nodes
 
-	// First we verify the signature. In order to trust the data, we want to see that DataTrails has
-	// committed to the state of the merkle log by signing it.
-	logStateNow, signatureVerificationErr := verifySignature(
-		context.Background(), publicVerificationKey, hasher, codec, testContext.Storer,
-		&newMassifContext,
-	)
-	require.NoError(t, signatureVerificationErr)
+// newMassifContext points to the following merkle log with 11 leaves. You can see the exact
+// structure of backupMassifContext within it (ending at leaf mmr index 10.) This illustrates
+// what it means for the merkle trees to be consistent.
+//
+//	         14
+//	        /  \
+//	       /    \
+//	      /      \
+//	     /        \
+//	    6          13
+//	  /   \       /   \
+//	 2     5     9     12     17
+//	/ \   / \   / \   /  \   /  \
+//
+// 0   1 3   4 7   8 10  11 15  16  18 <- Leaf Nodes
 
-	// Then we verify the consistency of the data between our previously trusted log state
-	// (accessible through backupMassifContext) and the current state (accessible through
-	// newMassifContext.)
-
-	// backupMassifContext points to the following merkle log with 7 leaves.
-	//
-	//	    6
-	//	  /   \
-	//	 2     5     9
-	//	/ \   / \   / \
-	// 0   1 3   4 7   8 10   <- Leaf Nodes
-
-	// newMassifContext points to the following merkle log with 11 leaves. You can see the exact
-	// structure of backupMassifContext within it (ending at leaf mmr index 10.) This illustrates
-	// what it means for the merkle trees to be consistent.
-	//
-	//	         14
-	//	        /  \
-	//	       /    \
-	//	      /      \
-	//	     /        \
-	//	    6          13
-	//	  /   \       /   \
-	//	 2     5     9     12     17
-	//	/ \   / \   / \   /  \   /  \
-	// 0   1 3   4 7   8 10  11 15  16  18 <- Leaf Nodes
-	verified, err := VerifyConsistencyFromMassifs(
-		context.Background(), publicVerificationKey, hasher, testContext.Storer, &backupMassifContext,
-		&newMassifContext, logStateNow,
-	)
-	require.NoError(t, err)
-
-	require.True(t, verified)
+type TestLogHelper struct {
+	t          *testing.T
+	tctx       mmrtesting.TestContext
+	tgen       integrationsupport.TestGenerator
+	signingKey ecdsa.PrivateKey
+	hasher     hash.Hash
+	codec      cbor.CBORCodec
 }
 
-func verifySignature(
-	ctx context.Context,
-	verificationKey ecdsa.PublicKey,
-	hasher hash.Hash,
-	codec cbor.CBORCodec,
-	blobReader azblob.Reader,
-	massifContextNow *massifs.MassifContext,
-) (*massifs.MMRState, error) {
-	sealReader := massifs.NewSignedRootReader(logger.Sugar, blobReader, codec)
+// AppendToLog appends `newEventCount` test events to the log for `tenantID`, generates a seal
+// and returns both the signed state and the reconstructed log state.
+func (b *TestLogHelper) AppendToLog(tenantID string, newEventCount int, clearBlobs bool) (*cose.CoseSign1Message, *massifs.MMRState, []*assets.EventResponse) {
+	events := integrationsupport.GenerateTenantLog(
+		&b.tctx, b.tgen, newEventCount, tenantID, clearBlobs,
+		integrationsupport.TestMassifHeight,
+	)
+	integrationsupport.GenerateMassifSeal(b.t, b.tctx, events[len(events)-1], b.signingKey)
 
-	// Fetch the latest signed state of the log
-	signedStateNow, logStateNow, err := sealReader.GetLatestMassifSignedRoot(ctx, mmrtesting.DefaultGeneratorTenantIdentity, 0)
-	if err != nil {
-		return nil, fmt.Errorf("verifySignature failed: unable to get latest signed root: %w", err)
+	signedState, err := SignedLogState(context.Background(), b.tctx.Storer, b.hasher, b.codec, tenantID, 0)
+	require.NoError(b.t, err)
+
+	logState, err := LogState(signedState, b.codec)
+	require.NoError(b.t, err)
+
+	return signedState, logState, events
+}
+
+func (b *TestLogHelper) VerifyConsistencyBetween(fromState *massifs.MMRState, toState *massifs.MMRState, inTenant string) bool {
+	result, err := VerifyConsistency(
+		context.Background(), b.hasher, b.tctx.Storer, inTenant, fromState, toState,
+	)
+
+	require.NoError(b.t, err)
+	return result
+}
+
+// TestConsistencyVerificationUnidirectionality checks that consistency proofs work as expected in
+// the happy case. It also examines a couple of ordering edge cases.
+func TestConsistencyVerificationUnidirectionality(t *testing.T) {
+	var err error
+	helper := TestLogHelper{
+		t:          t,
+		signingKey: massifs.TestGenerateECKey(t, elliptic.P256()),
+		hasher:     sha256.New(),
 	}
 
-	// The log state at time of sealing is the Payload. It included the root, but this is removed
-	// from the stored log state. This forces a verifier to recompute the merkle root from their view
-	// of the data. If verification succeeds when this computed root is added to signedStateNow, then
-	// we can be confident that DataTrails signed this state, and that the root matches your data.
-	logStateNow.Root, err = mmr.GetRoot(logStateNow.MMRSize, massifContextNow, hasher)
-	if err != nil {
-		return nil, fmt.Errorf("VerifyConsistency failed: unable to get root for massifContextNow: %w", err)
+	helper.codec, err = massifs.NewRootSignerCodec()
+	require.NoError(t, err)
+	helper.tctx, helper.tgen, _ = integrationsupport.NewAzuriteTestContext(t, "TestVerifyConsistency")
+	tenantID := mmrtesting.DefaultGeneratorTenantIdentity
+
+	_, logStateA, _ := helper.AppendToLog(tenantID, 2, true)
+	signedStateA2, logStateA2, _ := helper.AppendToLog(tenantID, 1, false)
+
+	sigVerErr := signedStateA2.VerifyWithPublicKey(&helper.signingKey.PublicKey, nil)
+	require.NoError(t, sigVerErr)
+
+	// logStateA contains 2 events and logStateB extends that by 1 event.
+
+	// A is a subset of A2, so we expect consistency here.
+	result := helper.VerifyConsistencyBetween(logStateA, logStateA2, tenantID)
+	require.True(t, result)
+
+	// A2 is a superset of A, so consistency verification must fail if we reverse the states.
+	result = helper.VerifyConsistencyBetween(logStateA2, logStateA, tenantID)
+	require.False(t, result)
+
+	// A2 is a (non-strict) subset of A2, so consistency verification should succeed
+	result = helper.VerifyConsistencyBetween(logStateA2, logStateA2, tenantID)
+	require.True(t, result)
+}
+
+// TestSignatureVerificationFailsIfTampered checks that our signature verification methods do
+// actually fail when signature is tampered with, for real seal data.
+func TestSignatureVerificationFailsIfTampered(t *testing.T) {
+	var err error
+	testLogBuilder := TestLogHelper{
+		t:          t,
+		signingKey: massifs.TestGenerateECKey(t, elliptic.P256()),
+		hasher:     sha256.New(),
 	}
 
-	signedStateNow.Payload, err = codec.MarshalCBOR(logStateNow)
-	if err != nil {
-		return nil, errors.New("error")
-	}
+	testLogBuilder.codec, err = massifs.NewRootSignerCodec()
+	require.NoError(t, err)
+	testLogBuilder.tctx, testLogBuilder.tgen, _ = integrationsupport.NewAzuriteTestContext(t, "TestVerifyConsistency")
+	tenantID := mmrtesting.DefaultGeneratorTenantIdentity
 
-	signatureVerificationError := signedStateNow.VerifyWithPublicKey(&verificationKey, nil)
-	if signatureVerificationError != nil {
-		return nil, fmt.Errorf("VerifyConsistency failed: signature verification failed: %w", err)
-	}
+	signedState, _, _ := testLogBuilder.AppendToLog(tenantID, 2, true)
+	sigVerErr := signedState.VerifyWithPublicKey(&testLogBuilder.signingKey.PublicKey, nil)
+	require.NoError(t, sigVerErr)
 
-	return &logStateNow, nil
+	signedState.Payload[0] = 'z'
+	sigVerErr = signedState.VerifyWithPublicKey(&testLogBuilder.signingKey.PublicKey, nil)
+	require.Error(t, sigVerErr)
 }
