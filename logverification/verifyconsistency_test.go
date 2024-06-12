@@ -41,7 +41,7 @@ import (
 //	  /   \
 //	 2     5     9
 //	/ \   / \   / \
-// 0   1 3   4 7   8 10   <- Leaf Nodes
+//     0   1 3   4 7   8 10   <- Leaf Nodes
 
 // newMassifContext points to the following merkle log with 11 leaves. You can see the exact
 // structure of backupMassifContext within it (ending at leaf mmr index 10.) This illustrates
