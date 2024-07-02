@@ -12,7 +12,7 @@ import "github.com/datatrails/go-datatrails-merklelog/mmr"
 //	events, that have been sorted from lowest mmr index to highest mmr index.
 //
 // Returns the lower and upper bound of the leaf indexes for the leaf range.
-func LeafRange(sortedEvents []EventDetails) (uint64, uint64) {
+func LeafRange(sortedEvents []VerifiableEvent) (uint64, uint64) {
 
 	lowerBoundMMRIndex := sortedEvents[0].MerkleLog.Commit.Index
 	lowerBoundLeafIndex := mmr.LeafCount(lowerBoundMMRIndex+1) - 1 // Note: LeafCount takes an mmrIndex here not a size

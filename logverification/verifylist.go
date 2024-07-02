@@ -169,7 +169,7 @@ var (
  *                  to be included on. E.g. the public tenant
  *                  for public events.
  */
-func VerifyList(reader azblob.Reader, eventListJson []byte, options ...VerifyOption) ([]uint64, error) {
+func VerifyList(reader azblob.Reader, eventList []VerifiableEvent, options ...VerifyOption) ([]uint64, error) {
 
 	verifyOptions := ParseOptions(options...)
 
@@ -178,12 +178,7 @@ func VerifyList(reader azblob.Reader, eventListJson []byte, options ...VerifyOpt
 	massifContext := massifs.MassifContext{}
 	omittedMMRIndices := []uint64{}
 
-	events, err := ParseEventList(eventListJson)
-	if err != nil {
-		return nil, err
-	}
-
-	lowestLeafIndex, highestLeafIndex := LeafRange(events)
+	lowestLeafIndex, highestLeafIndex := LeafRange(eventList)
 
 	massifReader := massifs.NewMassifReader(logger.Sugar, reader)
 
@@ -191,11 +186,11 @@ func VerifyList(reader azblob.Reader, eventListJson []byte, options ...VerifyOpt
 
 	for leafIndex := lowestLeafIndex; leafIndex <= highestLeafIndex; leafIndex += 1 {
 
-		if eventIndex >= len(events) {
+		if eventIndex >= len(eventList) {
 			return nil, ErrNotEnoughEventsInList
 		}
 
-		event := events[eventIndex]
+		event := eventList[eventIndex]
 
 		// ensure we set the tenantId if
 		//  if it passed in as an optional argument
@@ -237,7 +232,7 @@ func VerifyList(reader azblob.Reader, eventListJson []byte, options ...VerifyOpt
 func VerifyEventInList(
 	hasher hash.Hash,
 	leafIndex uint64,
-	event EventDetails,
+	event VerifiableEvent,
 	reader massifs.MassifReader,
 	massifContext *massifs.MassifContext,
 	tenantID string,
@@ -346,7 +341,7 @@ func VerifyEventInList(
 	// Check that the leaf node mmrEntry is the same as the event hash
 	//
 	// If its not, we know that the given event is not the same as the event on the leaf node.
-	if !bytes.Equal(leafMMREntry, event.EventHash) {
+	if !bytes.Equal(leafMMREntry, event.LeafHash) {
 		return Excluded, ErrEventNotOnLeaf
 	}
 
@@ -363,7 +358,7 @@ func VerifyEventInList(
 		return Unknown, err
 	}
 
-	verified := mmr.VerifyInclusion(mmrSize, hasher, event.EventHash, leafMMRIndex, inclusionProof, root)
+	verified := mmr.VerifyInclusion(mmrSize, hasher, event.LeafHash, leafMMRIndex, inclusionProof, root)
 
 	// if the inclusion proof verification failed, return EXCLUDED.
 	//

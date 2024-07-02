@@ -18,27 +18,27 @@ import (
 //
 //	of an event stored on an emulated azure blob storage.
 func TestVerifyEvent(t *testing.T) {
-
 	tc, g, _ := integrationsupport.NewAzuriteTestContext(t, "TestVerify")
 
 	// use the same tenant ID for all events
 	tenantID := mmrtesting.DefaultGeneratorTenantIdentity
 
 	events := integrationsupport.GenerateTenantLog(&tc, g, 10, tenantID, true, integrationsupport.TestMassifHeight)
-
-	lastEvent := events[len(events)-1]
+	event := events[len(events)-1]
 
 	// convert the last event into json
 	marshaler := assets.NewFlatMarshalerForEvents()
-	lastEventJSON, err := marshaler.Marshal(lastEvent)
-	require.Nil(t, err)
+	eventJSON, err := marshaler.Marshal(event)
+	require.NoError(t, err)
+
+	verifiableEvent, err := NewVerifiableEvent(eventJSON)
+	require.NoError(t, err)
 
 	// NOTE: we would usually use azblob.NewReaderNoAuth()
 	//       instead of tc.Storer. But the azurite emulator
 	//       doesn't allow for public reads, unlike actual
 	//       blob storage that does.
-	verified, err := VerifyEvent(tc.Storer, lastEventJSON, WithMassifHeight(integrationsupport.TestMassifHeight))
-	require.Nil(t, err)
-
+	verified, err := VerifyEvent(tc.Storer, *verifiableEvent, WithMassifHeight(integrationsupport.TestMassifHeight))
+	require.NoError(t, err)
 	assert.Equal(t, true, verified)
 }
