@@ -28,6 +28,16 @@ func serializeTestEvents(t *testing.T, events []*assets.EventResponse) []byte {
 	return eventsJson
 }
 
+// protoEventsToVerifiableEvents converts from he internally used proto EventResponse type
+// that our event generator returns, to the VerifiableEvent expected by logverification.
+func protoEventsToVerifiableEvents(t *testing.T, events []*assets.EventResponse) []VerifiableEvent {
+	eventJsonList := serializeTestEvents(t, events)
+	result, err := NewVerifiableEvents(eventJsonList)
+	require.NoError(t, err)
+
+	return result
+}
+
 func TestVerifyListIntegration(t *testing.T) {
 	logger.New("TestVerifyList")
 	defer logger.OnExit()
@@ -38,7 +48,7 @@ func TestVerifyListIntegration(t *testing.T) {
 	generatedEvents := integrationsupport.GenerateTenantLog(
 		&testContext, testGenerator, 8, tenantID, true, integrationsupport.TestMassifHeight,
 	)
-	eventJsonList := serializeTestEvents(t, generatedEvents)
+	events := protoEventsToVerifiableEvents(t, generatedEvents)
 
 	// massifHeight = 3, leaves = 8, so the first 4 leaves are in massif 0, and the others are in
 	// massif 1
@@ -48,7 +58,7 @@ func TestVerifyListIntegration(t *testing.T) {
 	// following:
 	//   1. Detect any events in the log that were omitted from the list of events we have.
 	//   2. Prove the inclusion of all events in our list against the merkle log.
-	omittedIndices, err := VerifyList(testContext.Storer, eventJsonList)
+	omittedIndices, err := VerifyList(testContext.Storer, events)
 	require.Nil(t, err)
 
 	// If there were omittedIndices in our events, then the events are incomplete within that time
@@ -73,8 +83,8 @@ func TestVerifyList_OmmittedEventReturned(t *testing.T) {
 		&testContext, testGenerator, 8, tenantID, true, integrationsupport.TestMassifHeight,
 	)
 	trimmedGeneratedEvents := append(generatedEvents[:3], generatedEvents[4:]...)
-	eventJsonList := serializeTestEvents(t, trimmedGeneratedEvents)
-	omittedIndices, err := VerifyList(testContext.Storer, eventJsonList)
+	events := protoEventsToVerifiableEvents(t, trimmedGeneratedEvents)
+	omittedIndices, err := VerifyList(testContext.Storer, events)
 
 	require.NoError(t, err)
 	require.Len(t, omittedIndices, 1)
@@ -96,8 +106,8 @@ func TestVerifyList_MultipleOmittedEventsReturned(t *testing.T) {
 		&testContext, testGenerator, 8, tenantID, true, integrationsupport.TestMassifHeight,
 	)
 	trimmedGeneratedEvents := append(generatedEvents[:3], generatedEvents[5:]...)
-	eventJsonList := serializeTestEvents(t, trimmedGeneratedEvents)
-	omittedIndices, err := VerifyList(testContext.Storer, eventJsonList)
+	events := protoEventsToVerifiableEvents(t, trimmedGeneratedEvents)
+	omittedIndices, err := VerifyList(testContext.Storer, events)
 
 	require.NoError(t, err)
 	require.Len(t, omittedIndices, 2)
@@ -119,8 +129,8 @@ func TestVerifyList_TamperedEventContent_ShouldError(t *testing.T) {
 
 	// Modify one of the logged events
 	generatedEvents[5].EventAttributes["additional"] = attribute.NewStringAttribute("foobar")
-	eventJsonList := serializeTestEvents(t, generatedEvents)
-	_, err := VerifyList(testContext.Storer, eventJsonList)
+	events := protoEventsToVerifiableEvents(t, generatedEvents)
+	_, err := VerifyList(testContext.Storer, events)
 
 	require.ErrorIs(t, err, ErrEventNotOnLeaf)
 }
@@ -143,8 +153,8 @@ func TestVerifyList_IntermediateNode_ShouldError(t *testing.T) {
 	eventsWithExtra := append(generatedEvents[:2], dodgyEvent)
 	eventsWithExtra = append(eventsWithExtra, generatedEvents[2:]...)
 
-	eventJsonList := serializeTestEvents(t, eventsWithExtra)
-	_, err := VerifyList(testContext.Storer, eventJsonList)
+	events := protoEventsToVerifiableEvents(t, eventsWithExtra)
+	_, err := VerifyList(testContext.Storer, events)
 
 	require.ErrorIs(t, err, ErrIntermediateNode)
 }

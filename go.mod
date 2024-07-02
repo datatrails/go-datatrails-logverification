@@ -8,7 +8,7 @@ require (
 	github.com/datatrails/go-datatrails-merklelog/massifs v0.0.10
 	github.com/datatrails/go-datatrails-merklelog/mmr v0.0.2
 	github.com/datatrails/go-datatrails-merklelog/mmrtesting v0.0.1
-	github.com/datatrails/go-datatrails-simplehash v0.0.3
+	github.com/datatrails/go-datatrails-simplehash v0.0.5
 	github.com/stretchr/testify v1.9.0
 	github.com/veraison/go-cose v1.1.0
 	google.golang.org/protobuf v1.34.1
