@@ -13,23 +13,13 @@ import (
  */
 
 // EventProof gets the event proof for the given event and the given massif the event
-//
-//	is contained in.
-func EventProof(eventJson []byte, massif *massifs.MassifContext) ([][]byte, error) {
-
-	// 1. get the massif (blob) index from the merkleLogEntry on the event
-	merkleLogEntry, err := MerklelogEntry(eventJson)
-	if err != nil {
-		return nil, err
-	}
-
-	// 2. now generate the proof
-	hasher := sha256.New()
-
-	// get the size of the complete tenant mmr
+// is contained in.
+func EventProof(verifiableEvent VerifiableEvent, massif *massifs.MassifContext) ([][]byte, error) {
+	// Get the size of the complete tenant MMR
 	mmrSize := massif.RangeCount()
 
-	proof, err := mmr.IndexProof(mmrSize, massif, hasher, merkleLogEntry.Commit.Index)
+	hasher := sha256.New()
+	proof, err := mmr.IndexProof(mmrSize, massif, hasher, verifiableEvent.MerkleLog.Commit.Index)
 	if err != nil {
 		return nil, err
 	}
@@ -38,37 +28,17 @@ func EventProof(eventJson []byte, massif *massifs.MassifContext) ([][]byte, erro
 }
 
 // VerifyProof verifies the given proof against the given event
-func VerifyProof(eventJson []byte, proof [][]byte, massif *massifs.MassifContext) (bool, error) {
-
-	// 1. get the massif (blob) index from the merkleLogEntry on the event
-	merkleLogEntry, err := MerklelogEntry(eventJson)
-	if err != nil {
-		return false, err
-	}
-
-	// 2. get the event hash from the event json
-	hashSchema, err := ChooseHashingSchema(massif.Start)
-	if err != nil {
-		return false, err
-	}
-
-	eventHash, err := hashSchema.HashEvent(eventJson)
-	if err != nil {
-		return false, err
-	}
-
-	hasher := sha256.New()
-
-	// 3. get the root of the mmr
+func VerifyProof(verifiableEvent VerifiableEvent, proof [][]byte, massif *massifs.MassifContext) (bool, error) {
+	// Get the size of the complete tenant MMR
 	mmrSize := massif.RangeCount()
 
+	hasher := sha256.New()
 	root, err := mmr.GetRoot(mmrSize, massif, hasher)
 	if err != nil {
 		return false, err
 	}
 
-	// 4. attempt to verify the proof
-	verified := mmr.VerifyInclusion(mmrSize, hasher, eventHash, merkleLogEntry.Commit.Index, proof, root)
-
+	verified := mmr.VerifyInclusion(mmrSize, hasher, verifiableEvent.LeafHash,
+		verifiableEvent.MerkleLog.Commit.Index, proof, root)
 	return verified, nil
 }

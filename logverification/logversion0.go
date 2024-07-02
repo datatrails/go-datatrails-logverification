@@ -35,6 +35,10 @@ func (h *LogVersion0Hasher) HashEvent(eventJson []byte) ([]byte, error) {
 	}
 
 	simplehashv3Hasher := simplehash.NewHasherV3()
+	v3Event, err := simplehash.V3FromEventJSON(eventJson)
+	if err != nil {
+		return nil, err
+	}
 
 	// the idCommitted is in hex from the event, we need to convert it to uint64
 	idCommitted, _, err := massifs.SplitIDTimestampHex(merkleLogEntry.Commit.Idtimestamp)
@@ -42,11 +46,11 @@ func (h *LogVersion0Hasher) HashEvent(eventJson []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	err = simplehashv3Hasher.HashEventFromJSON(
-		eventJson,
+	err = simplehashv3Hasher.HashEventFromV3(
+		v3Event,
 		simplehash.WithPrefix([]byte{LeafTypePlain}),
-		simplehash.WithIDCommitted(idCommitted))
-
+		simplehash.WithIDCommitted(idCommitted),
+	)
 	if err != nil {
 		return nil, err
 	}
