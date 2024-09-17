@@ -1,4 +1,5 @@
 .local
+.vscode
 __debug_bin*
 build-times.log
 .skaffold-tags.json

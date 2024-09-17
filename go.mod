@@ -5,14 +5,16 @@ go 1.22
 require (
 	github.com/datatrails/go-datatrails-common v0.16.1
 	github.com/datatrails/go-datatrails-common-api-gen v0.4.5
-	github.com/datatrails/go-datatrails-merklelog/massifs v0.0.10
+	github.com/datatrails/go-datatrails-merklelog/massifs v0.1.0
 	github.com/datatrails/go-datatrails-merklelog/mmr v0.0.2
-	github.com/datatrails/go-datatrails-merklelog/mmrtesting v0.0.1
+	github.com/datatrails/go-datatrails-merklelog/mmrtesting v0.1.0
 	github.com/datatrails/go-datatrails-simplehash v0.0.5
 	github.com/stretchr/testify v1.9.0
 	github.com/veraison/go-cose v1.1.0
 	google.golang.org/protobuf v1.34.1
 )
+
+// replace github.com/datatrails/go-datatrails-merklelog/massifs => ../go-datatrails-merklelog/massifs
 
 require (
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible // indirect
