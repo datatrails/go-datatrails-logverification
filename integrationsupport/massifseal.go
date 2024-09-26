@@ -3,7 +3,6 @@ package integrationsupport
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/sha256"
 	"testing"
 
 	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
@@ -20,21 +19,20 @@ import (
 // the test context.
 func GenerateMassifSeal(t *testing.T, testContext mmrtesting.TestContext, lastEvent *assets.EventResponse, signingKey ecdsa.PrivateKey) {
 	massifReader := massifs.NewMassifReader(logger.Sugar, testContext.Storer)
-	hasher := sha256.New()
 
 	// Just handle a single massif for now
 	massifContext, err := massifReader.GetMassif(context.TODO(), mmrtesting.DefaultGeneratorTenantIdentity, 0)
 	require.Nil(t, err)
 
 	mmrSize := massifContext.RangeCount()
-	root, err := mmr.GetRoot(mmrSize, &massifContext, hasher)
+	peaks, err := mmr.PeakHashes(&massifContext, mmrSize)
 	require.Nil(t, err)
 	id, epoch, err := massifs.SplitIDTimestampHex(lastEvent.MerklelogEntry.Commit.Idtimestamp)
 	require.Nil(t, err)
 
 	mmrState := massifs.MMRState{
 		MMRSize:         mmrSize,
-		Root:            root,
+		Peaks:           peaks,
 		CommitmentEpoch: uint32(epoch),
 		IDTimestamp:     id,
 	}
