@@ -212,7 +212,7 @@ func VerifyList(reader azblob.Reader, eventList []VerifiableEvent, options ...Ve
 
 		// if the event is OMITTED add the leaf to the omitted list
 		if eventType == Omitted {
-			omittedMMRIndices = append(omittedMMRIndices, mmr.TreeIndex(leafIndex))
+			omittedMMRIndices = append(omittedMMRIndices, mmr.MMRIndex(leafIndex))
 
 			// as the event is still the lowest mmrIndex we check this event
 			//  against the next leaf
@@ -240,7 +240,7 @@ func VerifyEventInList(
 
 	hasher.Reset()
 
-	leafMMRIndex := mmr.TreeIndex(leafIndex)
+	leafMMRIndex := mmr.MMRIndex(leafIndex)
 	eventMMRIndex := event.MerkleLog.Commit.Index
 
 	// First we check if the event mmrIndex corresponds to a leaf node.
@@ -348,23 +348,19 @@ func VerifyEventInList(
 	// Now we know that the event is the event stored on the leaf node,
 	// we can do an inclusion proof of the leaf node on the merkle log.
 	mmrSize := massifContext.RangeCount()
-	root, err := mmr.GetRoot(mmrSize, massifContext, hasher)
+
+	inclusionProof, err := mmr.InclusionProof(massifContext, mmrSize-1, leafMMRIndex)
 	if err != nil {
 		return Unknown, err
 	}
 
-	inclusionProof, err := mmr.IndexProof(mmrSize, massifContext, hasher, leafMMRIndex)
-	if err != nil {
-		return Unknown, err
-	}
-
-	verified := mmr.VerifyInclusion(mmrSize, hasher, event.LeafHash, leafMMRIndex, inclusionProof, root)
-
-	// if the inclusion proof verification failed, return EXCLUDED.
-	//
-	// This means the leaf node is not included on the merklelog.
-	if !verified {
+	verified, err := mmr.VerifyInclusion(
+		massifContext, hasher, mmrSize, event.LeafHash, leafMMRIndex, inclusionProof)
+	if !verified || errors.Is(err, mmr.ErrVerifyInclusionFailed) {
 		return Excluded, ErrInclusionProofVerify
+	}
+	if err != nil {
+		return Unknown, err
 	}
 
 	return Included, nil

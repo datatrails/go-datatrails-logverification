@@ -18,8 +18,7 @@ func EventProof(verifiableEvent VerifiableEvent, massif *massifs.MassifContext) 
 	// Get the size of the complete tenant MMR
 	mmrSize := massif.RangeCount()
 
-	hasher := sha256.New()
-	proof, err := mmr.IndexProof(mmrSize, massif, hasher, verifiableEvent.MerkleLog.Commit.Index)
+	proof, err := mmr.InclusionProof(massif, mmrSize-1, verifiableEvent.MerkleLog.Commit.Index)
 	if err != nil {
 		return nil, err
 	}
@@ -33,12 +32,7 @@ func VerifyProof(verifiableEvent VerifiableEvent, proof [][]byte, massif *massif
 	mmrSize := massif.RangeCount()
 
 	hasher := sha256.New()
-	root, err := mmr.GetRoot(mmrSize, massif, hasher)
-	if err != nil {
-		return false, err
-	}
 
-	verified := mmr.VerifyInclusion(mmrSize, hasher, verifiableEvent.LeafHash,
-		verifiableEvent.MerkleLog.Commit.Index, proof, root)
-	return verified, nil
+	return mmr.VerifyInclusion(massif, hasher, mmrSize, verifiableEvent.LeafHash,
+		verifiableEvent.MerkleLog.Commit.Index, proof)
 }

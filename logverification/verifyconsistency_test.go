@@ -90,8 +90,11 @@ func (b *TestLogHelper) VerifyConsistencyBetween(fromState *massifs.MMRState, to
 	result, err := VerifyConsistency(
 		context.Background(), b.hasher, b.tctx.Storer, inTenant, fromState, toState,
 	)
-
-	require.NoError(b.t, err)
+	// Some callers are testing negative results, so we only ensure that the
+	// true/false is consistent with the error state here.
+	if result == true {
+		require.NoError(b.t, err)
+	}
 	return result
 }
 

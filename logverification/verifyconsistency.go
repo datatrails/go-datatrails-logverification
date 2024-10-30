@@ -2,7 +2,6 @@ package logverification
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"hash"
@@ -17,10 +16,10 @@ import (
 // MMRState is an abstraction, but it is assumed that logStateA comes from a local, trusted copy of the data
 // rather than a fresh download from DataTrails.
 //
+// This function assumes the two log states are from the same massif.
+//
 // NOTE: the log state's signatures are not verified in this function, it is expected that the signature verification
 // is done as a separate step to the consistency verification.
-//
-// NOTE: it is expected that both logStateA and logStateB have had their root recalculated.
 func VerifyConsistency(
 	ctx context.Context,
 	hasher hash.Hash,
@@ -30,21 +29,15 @@ func VerifyConsistency(
 	logStateB *massifs.MMRState,
 ) (bool, error) {
 
-	if logStateA.Root == nil || logStateB.Root == nil {
+	if logStateA.Peaks == nil || logStateB.Peaks == nil {
 		return false, errors.New("VerifyConsistency failed: the roots for both log state A and log state B need to be set")
 	}
 
-	if len(logStateA.Root) == 0 || len(logStateB.Root) == 0 {
+	if len(logStateA.Peaks) == 0 || len(logStateB.Peaks) == 0 {
 		return false, errors.New("VerifyConsistency failed: the roots for both log state A and log state B need to be set")
 	}
 
 	massifReader := massifs.NewMassifReader(logger.Sugar, reader)
-
-	// last massif in the merkle log for log state A
-	massifContextA, err := Massif(logStateA.MMRSize-1, massifReader, tenantID, DefaultMassifHeight)
-	if err != nil {
-		return false, fmt.Errorf("VerifyConsistency failed: unable to get the last massif for log state A: %w", err)
-	}
 
 	// last massif in the merkle log for log state B
 	massifContextB, err := Massif(logStateB.MMRSize-1, massifReader, tenantID, DefaultMassifHeight)
@@ -52,80 +45,28 @@ func VerifyConsistency(
 		return false, fmt.Errorf("VerifyConsistency failed: unable to get the last massif for log state B: %w", err)
 	}
 
-	// We construct a proof of consistency between logStateA and logStateB.
-	//  This will be a proof that logStateB derives from logStateA.
-	consistencyProof, err := mmr.IndexConsistencyProof(logStateA.MMRSize, logStateB.MMRSize, massifContextB, hasher)
-	if err != nil {
-		return false, fmt.Errorf("VerifyConsistency failed: unable to generate consistency proof: %w", err)
-	}
+	// We check a proof of consistency between logStateA and logStateB.
+	// This will be a proof that logStateB includes all elements from logStateA,
+	// and includes them in the same positions.
 
-	// In order to verify the proof we take the hashes of all of the peaks in logStateA.
-	// The hash of each of these peaks guarantees the integrity of all of its child nodes, so we
-	// don't need to check every hash.
+	// In order to verify the proof we verify that the inclusion proofs of each of
+	// the peaks from the old log matches a peak in the new log.
+	// Because a proof of inclusion requires that the proof reproduces the peak,
+	// and because all nodes in the old tree have proofs that pass through the
+	// old peaks and then reach the new peaks, we know it is not possible for
+	// the children to verify unless their peaks also verify.  So we don't need
+	// to check every hash.
 
-	// Peaks returned as MMR positions (1-based), not MMR indices (0-based). The location of these
-	// is deterministic: Given an MMR of a particular size, the peaks will always be in the same place.
-	logPeaksA := mmr.Peaks(logStateA.MMRSize)
+	verified, _ /*peaksB*/, err := mmr.CheckConsistency(massifContextB, hasher, logStateA.MMRSize, logStateB.MMRSize, logStateA.Peaks)
 
-	// Get the hashes of all of the peaks.
-	logPeakHashesA, err := mmr.PeakBagRHS(massifContextA, hasher, 0, logPeaksA)
-	if err != nil {
-		return false, errors.New("error")
-	}
-
-	// Lastly, verify the consistency proof using the peak hashes from our backed-up log. If this
-	// returns true, then we can confidently say that everything in the backed-up log is in the state
-	// of the log described by this signed state.
-	verified := mmr.VerifyConsistency(hasher, logPeakHashesA, consistencyProof, logStateA.Root, logStateB.Root)
-	return verified, nil
-}
-
-// VerifyConsistencyFromMassifs takes a massif context providing access to data from the past, and a massif
-// context providing access to the current version of the log. It returns whether or not the
-// new version of the log is consistent with the previous version (i.e. it contains all of the
-// same nodes in the same positions.)
-//
-// It is assumed that in a production use case, massifContextBefore provides access to a trusted
-// local copy of the massif, rather than a fresh download from DataTrails.
-func VerifyConsistencyFromMassifs(
-	ctx context.Context,
-	verificationKey ecdsa.PublicKey,
-	hasher hash.Hash,
-	blobReader azblob.Reader,
-	massifContextBefore *massifs.MassifContext,
-	massifContextNow *massifs.MassifContext,
-	logStateNow *massifs.MMRState,
-) (bool, error) {
-	// Grab some core info about our backed up merkle log, which we'll need to prove consistency
-	mmrSizeBefore := massifContextBefore.Count()
-	rootBefore, err := mmr.GetRoot(mmrSizeBefore, massifContextBefore, hasher)
-	if err != nil {
-		return false, fmt.Errorf("VerifyConsistency failed: unable to get root for massifContextBefore: %w", err)
-	}
-
-	// We construct a proof of consistency between the backed up MMR log and the head of the log.
-	consistencyProof, err := mmr.IndexConsistencyProof(mmrSizeBefore, logStateNow.MMRSize, massifContextNow, hasher)
-	if err != nil {
-		return false, errors.New("error")
-	}
-
-	// In order to verify the proof we take the hashes of all of the peaks in the backed up log.
-	// The hash of each of these peaks guarantees the integrity of all of its child nodes, so we
-	// don't need to check every hash.
-
-	// Peaks returned as MMR positions (1-based), not MMR indices (0-based). The location of these
-	// is deterministic: Given an MMR of a particular size, the peaks will always be in the same place.
-	backupLogPeaks := mmr.Peaks(mmrSizeBefore)
-
-	// Get the hashes of all of the peaks.
-	backupLogPeakHashes, err := mmr.PeakBagRHS(massifContextNow, hasher, 0, backupLogPeaks)
-	if err != nil {
-		return false, errors.New("error")
-	}
-
-	// Lastly, verify the consistency proof using the peak hashes from our backed-up log. If this
-	// returns true, then we can confidently say that everything in the backed-up log is in the state
-	// of the log described by this signed state.
-	verified := mmr.VerifyConsistency(hasher, backupLogPeakHashes, consistencyProof, rootBefore, logStateNow.Root)
-	return verified, nil
+	// A tampered node can not be proven unless the entire log is re-built.  If
+	// a log is re-built, any proof held by a relying party will not verify. And
+	// as it is signed, it is evidence the log was re-built by someone with
+	// access to our signing key.
+	// In the case of a tamper (or corruption) without re-build, the proof of inclusion will fail.
+	// Examining the parent and sibling of an individually tampered node will reveal the tamper.
+	// This means we are always fail safe in the case of a tampered node - a
+	// party relying on the log can guarantee the will never use unverifiable
+	// data.
+	return verified, err
 }
