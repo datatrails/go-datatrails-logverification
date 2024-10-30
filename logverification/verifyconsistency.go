@@ -68,5 +68,5 @@ func VerifyConsistency(
 	// This means we are always fail safe in the case of a tampered node - a
 	// party relying on the log can guarantee the will never use unverifiable
 	// data.
-	return verified, nil
+	return verified, err
 }
