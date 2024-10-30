@@ -25,7 +25,7 @@ func GenerateMassifSeal(t *testing.T, testContext mmrtesting.TestContext, lastEv
 	require.Nil(t, err)
 
 	mmrSize := massifContext.RangeCount()
-	peaks, err := mmr.PeakHashes(&massifContext, mmrSize)
+	peaks, err := mmr.PeakHashes(&massifContext, mmrSize-1)
 	require.Nil(t, err)
 	id, epoch, err := massifs.SplitIDTimestampHex(lastEvent.MerklelogEntry.Commit.Idtimestamp)
 	require.Nil(t, err)

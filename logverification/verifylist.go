@@ -349,7 +349,7 @@ func VerifyEventInList(
 	// we can do an inclusion proof of the leaf node on the merkle log.
 	mmrSize := massifContext.RangeCount()
 
-	inclusionProof, err := mmr.IndexProof(massifContext, mmrSize, leafMMRIndex)
+	inclusionProof, err := mmr.InclusionProof(massifContext, mmrSize-1, leafMMRIndex)
 	if err != nil {
 		return Unknown, err
 	}

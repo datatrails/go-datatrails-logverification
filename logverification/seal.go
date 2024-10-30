@@ -48,7 +48,7 @@ func SignedLogState(
 	// of the data. If verification succeeds when this computed root is added to signedStateNow, then
 	// we can be confident that DataTrails signed this state, and that the root matches your data.
 
-	logState.Peaks, err = mmr.PeakHashes(&massifContext, logState.MMRSize)
+	logState.Peaks, err = mmr.PeakHashes(&massifContext, logState.MMRSize-1)
 	if err != nil {
 		return nil, fmt.Errorf("SignedLogState failed: unable to get root for massifContextNow: %w", err)
 	}

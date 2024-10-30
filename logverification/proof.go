@@ -18,7 +18,7 @@ func EventProof(verifiableEvent VerifiableEvent, massif *massifs.MassifContext) 
 	// Get the size of the complete tenant MMR
 	mmrSize := massif.RangeCount()
 
-	proof, err := mmr.IndexProof(massif, mmrSize, verifiableEvent.MerkleLog.Commit.Index)
+	proof, err := mmr.InclusionProof(massif, mmrSize-1, verifiableEvent.MerkleLog.Commit.Index)
 	if err != nil {
 		return nil, err
 	}
