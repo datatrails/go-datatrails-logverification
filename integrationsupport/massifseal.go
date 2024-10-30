@@ -31,6 +31,7 @@ func GenerateMassifSeal(t *testing.T, testContext mmrtesting.TestContext, lastEv
 	require.Nil(t, err)
 
 	mmrState := massifs.MMRState{
+		Version:         1,
 		MMRSize:         mmrSize,
 		Peaks:           peaks,
 		CommitmentEpoch: uint32(epoch),
