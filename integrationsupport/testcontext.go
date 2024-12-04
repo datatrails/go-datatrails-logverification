@@ -101,7 +101,7 @@ func GenerateTenantLog(tc *mmrtesting.TestContext, g TestGenerator, eventTotal i
 		mmrIndex := mc.RangeCount()
 
 		// add the generated event to the mmr
-		_, err1 = mc.AddHashedLeaf(sha256.New(), idTimestamp, []byte(ev.TenantIdentity), []byte(ev.GetIdentity()), leafValue)
+		_, err1 = mc.AddHashedLeaf(sha256.New(), idTimestamp, nil, []byte(ev.TenantIdentity), []byte(ev.GetIdentity()), leafValue)
 		if err1 != nil {
 			if errors.Is(err1, massifs.ErrMassifFull) {
 				var err2 error
@@ -114,7 +114,7 @@ func GenerateTenantLog(tc *mmrtesting.TestContext, g TestGenerator, eventTotal i
 					tc.T.Fatalf("unexpected err: %v", err)
 				}
 
-				_, err1 = mc.AddHashedLeaf(sha256.New(), idTimestamp, []byte(ev.TenantIdentity), []byte(ev.GetIdentity()), leafValue)
+				_, err1 = mc.AddHashedLeaf(sha256.New(), idTimestamp, nil, []byte(ev.TenantIdentity), []byte(ev.GetIdentity()), leafValue)
 			}
 
 			require.Nil(tc.T, err1)
