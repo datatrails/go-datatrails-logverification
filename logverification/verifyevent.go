@@ -13,18 +13,18 @@ import (
 //	against the immutable merkle log, aquired using the given reader.
 //
 // Returns true if the event is found to be on the log, otherwise false.
-func VerifyEvent(reader azblob.Reader, verifiableEvent VerifiableEvent, options ...MassifOption) (bool, error) {
+func VerifyEvent(reader azblob.Reader, verifiableEvent VerifiableAssetsV2Event, options ...MassifOption) (bool, error) {
 
-	massif, err := MassifFromEvent(verifiableEvent, reader, options...)
+	massif, err := MassifFromEvent(&verifiableEvent, reader, options...)
 
 	if err != nil {
 		return false, err
 	}
 
-	proof, err := EventProof(verifiableEvent, massif)
+	proof, err := EventProof(&verifiableEvent, massif)
 	if err != nil {
 		return false, err
 	}
 
-	return VerifyProof(verifiableEvent, proof, massif)
+	return VerifyProof(&verifiableEvent, proof, massif)
 }

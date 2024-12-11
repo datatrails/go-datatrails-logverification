@@ -17,20 +17,20 @@ var (
 
 // Validate performs basic validation on the VerifiableEvent, ensuring that critical fields
 // are present.
-func (e *VerifiableEvent) Validate() error {
-	if e.EventID == "" {
+func (e *VerifiableAssetsV2Event) Validate() error {
+	if e.AppId == "" {
 		return ErrNonEmptyEventIDRequired
 	}
 
-	if e.TenantID == "" {
+	if len(e.LogId) == 0 {
 		return ErrNonEmptyTenantIDRequired
 	}
 
-	if e.MerkleLog == nil || e.MerkleLog.Commit == nil {
+	if e.MerkleLogCommit == nil {
 		return ErrCommitEntryRequired
 	}
 
-	if e.MerkleLog.Commit.Idtimestamp == "" {
+	if e.MerkleLogCommit.Idtimestamp == "" {
 		return ErrIdTimestampRequired
 	}
 

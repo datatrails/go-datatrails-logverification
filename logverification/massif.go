@@ -38,18 +38,23 @@ func Massif(mmrIndex uint64, massifReader massifs.MassifReader, tenantId string,
 
 // MassifFromEvent gets the massif (blob) that contains the given event, from azure blob storage
 // defined by the azblob configuration.
-func MassifFromEvent(verifiableEvent VerifiableEvent, reader azblob.Reader, options ...MassifOption) (*massifs.MassifContext, error) {
+func MassifFromEvent(verifiableEvent *VerifiableAssetsV2Event, reader azblob.Reader, options ...MassifOption) (*massifs.MassifContext, error) {
 	massifOptions := ParseMassifOptions(options...)
 	massifHeight := massifOptions.massifHeight
 
 	// if tenant ID is not supplied, find it based on the given eventJson
 	tenantId := massifOptions.tenantId
 	if tenantId == "" {
-		tenantId = verifiableEvent.TenantID
+
+		var err error
+		tenantId, err = verifiableEvent.LogTenant()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	massifReader := massifs.NewMassifReader(logger.Sugar, reader)
-	return Massif(verifiableEvent.MerkleLog.Commit.Index, massifReader, tenantId, massifHeight)
+	return Massif(verifiableEvent.MerkleLogCommit.Index, massifReader, tenantId, massifHeight)
 }
 
 // ChooseHashingSchema chooses the hashing schema based on the log version in the massif blob start record.
