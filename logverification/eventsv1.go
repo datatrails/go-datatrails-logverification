@@ -152,22 +152,6 @@ func NewEventsV1ExtraBytes(originTenant string) ([]byte, error) {
 	return extraBytes, nil
 }
 
-// MMREntry gets the MMR Entry from the VerifiableEventsV1Event
-// for assetsv2 this is simplehashv3 hash and the 'serializedBytes' is the original
-// event json.
-//
-// NOTE: the original event json isn't really serializedbytes, but the LogVersion0 hasher includes
-// the serialization.
-func (ve *VerifiableEventsV1Event) MMREntry() ([]byte, error) {
-	hasher := LogVersion0Hasher{}
-	eventHash, err := hasher.HashEvent(ve.MMREntryFields.SerializedBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	return eventHash, nil
-}
-
 // LogTenant returns the Log tenant that committed this assetsv2 event to the log
 //
 // as a tenant identity.
