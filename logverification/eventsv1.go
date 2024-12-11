@@ -62,7 +62,7 @@ func NewVerifiableEventsV1Events(eventsJson []byte) ([]VerifiableEventsV1Event, 
 
 // NewVerifiableEventsV1Events takes a single eventsv1 event JSON and returns a VerifiableEventsV1Event,
 // providing just enough information to verify and identify the event.
-func NewVerifiableEventsV1Event(eventJson []byte, opts ...VerifiableLogEntryOption) (*VerifiableEventsV1Event, error) {
+func NewVerifiableEventsV1Event(eventJson []byte, logTenant string, opts ...VerifiableLogEntryOption) (*VerifiableEventsV1Event, error) {
 
 	// special care is needed here to deal with uint64 types. json marshal /
 	// un marshal treats them as strings because they don't fit in a
@@ -72,9 +72,8 @@ func NewVerifiableEventsV1Event(eventJson []byte, opts ...VerifiableLogEntryOpti
 	// defered decoding to get the raw merklelog entry as it must be
 	// unmarshaled using protojson and the specific generated target type.
 	entry := struct {
-		Identity       string `json:"identity,omitempty"`
-		TenantIdentity string `json:"tenant_identity,omitempty"`
-		OriginTenant   string `json:"origin_tenant,omitempty"`
+		Identity     string `json:"identity,omitempty"`
+		OriginTenant string `json:"origin_tenant,omitempty"`
 
 		Attributes map[string]json.RawMessage `json:"attributes,omitempty"`
 		Trails     []string                   `json:"trails,omitempty"`
@@ -95,7 +94,7 @@ func NewVerifiableEventsV1Event(eventJson []byte, opts ...VerifiableLogEntryOpti
 	}
 
 	// get the logID from the event log tenant
-	logUuid := strings.TrimPrefix(entry.TenantIdentity, "tenant/")
+	logUuid := strings.TrimPrefix(logTenant, "tenant/")
 	logId, err := uuid.Parse(logUuid)
 	if err != nil {
 		return nil, err
