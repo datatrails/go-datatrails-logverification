@@ -3,11 +3,13 @@ package logverification
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 
 	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
 	"github.com/datatrails/go-datatrails-common-api-gen/attribute/v2/attribute"
+	"github.com/datatrails/go-datatrails-common-api-gen/marshalers/simpleoneof"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/encoding/protojson"
 
@@ -115,7 +117,14 @@ func NewVerifiableEventsV1Event(eventJson []byte, logTenant string, opts ...Veri
 
 		attribute := &attribute.Attribute{}
 
-		err = protojson.Unmarshal(protoAttribute, attribute)
+		marshaler := simpleoneof.NewFlatMarshaler(
+			[]reflect.Type{
+				reflect.TypeOf(entry),
+			},
+			nil,
+		)
+
+		err = marshaler.Unmarshal(protoAttribute, attribute)
 		if err != nil {
 			return nil, err
 		}
