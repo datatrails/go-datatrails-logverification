@@ -77,13 +77,22 @@ func NewVerifiableEventsV1Event(eventJson []byte, logTenant string, opts ...Veri
 		Identity     string `json:"identity,omitempty"`
 		OriginTenant string `json:"origin_tenant,omitempty"`
 
-		Attributes map[string]json.RawMessage `json:"attributes,omitempty"`
-		Trails     []string                   `json:"trails,omitempty"`
+		Attributes map[string]*attribute.Attribute `json:"attributes,omitempty"`
+		Trails     []string                        `json:"trails,omitempty"`
 
 		// Note: the proof_details top level field can be ignored here because it is a 'oneof'
 		MerkleLogCommit json.RawMessage `json:"merklelog_commit,omitempty"`
 	}{}
-	err := json.Unmarshal(eventJson, &entry)
+
+	marshaler := simpleoneof.NewFlatMarshalerForAssetsV2(
+		[]reflect.Type{
+			reflect.TypeOf(entry),
+		},
+		nil,
+		[]string{},
+	)
+
+	err := marshaler.Unmarshal(eventJson, &entry)
 	if err != nil {
 		return nil, err
 	}
@@ -108,32 +117,8 @@ func NewVerifiableEventsV1Event(eventJson []byte, logTenant string, opts ...Veri
 		return nil, err
 	}
 
-	// get the attributes
-	//
-	// NOTE: this is a little fiddly because a we need the object
-	// we unmarshal with `protojson` to implement proto reflect.
-	attributes := map[string]*attribute.Attribute{}
-	for key, protoAttribute := range entry.Attributes {
-
-		attribute := &attribute.Attribute{}
-
-		marshaler := simpleoneof.NewFlatMarshaler(
-			[]reflect.Type{
-				reflect.TypeOf(entry),
-			},
-			nil,
-		)
-
-		err = marshaler.Unmarshal(protoAttribute, attribute)
-		if err != nil {
-			return nil, err
-		}
-
-		attributes[key] = attribute
-	}
-
 	// get the serialized bytes
-	serializedBytes, err := eventsv1.SerializeEvent(attributes, entry.Trails)
+	serializedBytes, err := eventsv1.SerializeEvent(entry.Attributes, entry.Trails)
 	if err != nil {
 		return nil, err
 	}
