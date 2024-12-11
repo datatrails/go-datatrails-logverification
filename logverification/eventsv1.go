@@ -31,7 +31,7 @@ type VerifiableEventsV1Event struct {
 
 // NewVerifiableEventsV1Events takes a list of events JSON (e.g. from the events list API), converts them
 // into VerifiableEventsV1Event and then returns them sorted by ascending MMR index.
-func NewVerifiableEventsV1Events(eventsJson []byte) ([]VerifiableEventsV1Event, error) {
+func NewVerifiableEventsV1Events(eventsJson []byte, logTenant string) ([]VerifiableEventsV1Event, error) {
 	// get the event list out of events
 	eventListJson := struct {
 		Events []json.RawMessage `json:"events"`
@@ -44,7 +44,7 @@ func NewVerifiableEventsV1Events(eventsJson []byte) ([]VerifiableEventsV1Event, 
 
 	events := []VerifiableEventsV1Event{}
 	for _, eventJson := range eventListJson.Events {
-		verifiableEvent, err := NewVerifiableEventsV1Event(eventJson)
+		verifiableEvent, err := NewVerifiableEventsV1Event(eventJson, logTenant)
 		if err != nil {
 			return nil, err
 		}
