@@ -124,7 +124,7 @@ func NewVerifiableEventsV1Event(eventJson []byte, logTenant string, opts ...Veri
 			LogId: logId[:],
 			MMREntryFields: &MMREntryFields{
 				Domain:          byte(0),
-				SerializedBytes: serializedBytes, // we cheat a bit here, because the eventJson isn't really serialized
+				SerializedBytes: serializedBytes,
 			},
 			ExtraBytes:       extraBytes,
 			MerkleLogCommit:  merkleLogCommit,
