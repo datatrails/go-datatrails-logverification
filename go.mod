@@ -8,7 +8,7 @@ require (
 	github.com/datatrails/go-datatrails-merklelog/massifs v0.3.1
 	github.com/datatrails/go-datatrails-merklelog/mmr v0.1.1
 	github.com/datatrails/go-datatrails-merklelog/mmrtesting v0.1.0
-	github.com/datatrails/go-datatrails-serialization/eventsv1 v0.0.2-0.20241212102459-3c576de929d9
+	github.com/datatrails/go-datatrails-serialization/eventsv1 v0.0.2
 	github.com/datatrails/go-datatrails-simplehash v0.0.5
 	github.com/google/uuid v1.6.0
 	github.com/stretchr/testify v1.10.0
