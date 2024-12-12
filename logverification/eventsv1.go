@@ -150,7 +150,7 @@ func NewEventsV1ExtraBytes(originTenant string) ([]byte, error) {
 		return nil, err
 	}
 
-	copy(extraBytes[1:len(originTenantUuid)], originTenantUuid[:])
+	copy(extraBytes[1:len(originTenantUuid)+1], originTenantUuid[:])
 
 	return extraBytes, nil
 }
