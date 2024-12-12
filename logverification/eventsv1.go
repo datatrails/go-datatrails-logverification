@@ -3,13 +3,10 @@ package logverification
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"sort"
 	"strings"
 
 	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
-	"github.com/datatrails/go-datatrails-common-api-gen/attribute/v2/attribute"
-	"github.com/datatrails/go-datatrails-common-api-gen/marshalers/simpleoneof"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/encoding/protojson"
 
@@ -77,22 +74,14 @@ func NewVerifiableEventsV1Event(eventJson []byte, logTenant string, opts ...Veri
 		Identity     string `json:"identity,omitempty"`
 		OriginTenant string `json:"origin_tenant,omitempty"`
 
-		Attributes map[string]*attribute.Attribute `json:"attributes,omitempty"`
-		Trails     []string                        `json:"trails,omitempty"`
+		Attributes map[string]any `json:"attributes,omitempty"`
+		Trails     []string       `json:"trails,omitempty"`
 
 		// Note: the proof_details top level field can be ignored here because it is a 'oneof'
 		MerkleLogCommit json.RawMessage `json:"merklelog_commit,omitempty"`
 	}{}
 
-	marshaler := simpleoneof.NewFlatMarshalerForAssetsV2(
-		[]reflect.Type{
-			reflect.TypeOf(entry),
-		},
-		nil,
-		[]string{},
-	)
-
-	err := marshaler.Unmarshal(eventJson, &entry)
+	err := json.Unmarshal(eventJson, &entry)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +107,11 @@ func NewVerifiableEventsV1Event(eventJson []byte, logTenant string, opts ...Veri
 	}
 
 	// get the serialized bytes
-	serializedBytes, err := eventsv1.SerializeEvent(entry.Attributes, entry.Trails)
+	serializableEvent := eventsv1.SerializableEvent{
+		Attributes: entry.Attributes,
+		Trails:     entry.Trails,
+	}
+	serializedBytes, err := serializableEvent.Serialize()
 	if err != nil {
 		return nil, err
 	}
