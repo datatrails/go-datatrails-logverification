@@ -19,19 +19,24 @@ import (
 	"github.com/veraison/go-cose"
 )
 
+const (
+	millisecondMultiplier = 1000
+	eventRate             = 500
+)
+
 func NewAzuriteTestContext(
 	t *testing.T,
 	testLabelPrefix string,
 ) (mmrtesting.TestContext, TestGenerator, mmrtesting.TestConfig) {
 	cfg := mmrtesting.TestConfig{
-		StartTimeMS: (1698342521) * 1000, EventRate: 500,
+		StartTimeMS: (1698342521) * millisecondMultiplier, EventRate: eventRate,
 		TestLabelPrefix: testLabelPrefix,
 		TenantIdentity:  "",
 		Container:       strings.ReplaceAll(strings.ToLower(testLabelPrefix), "_", "")}
 	leafHasher := NewLeafHasher()
 	tc := mmrtesting.NewTestContext(t, cfg)
 	g := NewTestGenerator(
-		t, cfg.StartTimeMS/1000,
+		t, cfg.StartTimeMS/millisecondMultiplier,
 		&leafHasher,
 		mmrtesting.TestGeneratorConfig{
 			StartTimeMS:     cfg.StartTimeMS,

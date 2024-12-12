@@ -21,6 +21,8 @@ const (
 
 	// EventsV1AppDomain is the events v1 app domain
 	EventsV1AppDomain = byte(1)
+
+	ExtraBytesSize = 24
 )
 
 // VerifiableEventsV1Event contains key information for verifying inclusion of merkle log events
@@ -139,7 +141,7 @@ func NewVerifiableEventsV1Event(eventJson []byte, logTenant string, opts ...Veri
 // NOTE: the extraBytes will always be padded to 24 bytes
 func NewEventsV1ExtraBytes(originTenant string) ([]byte, error) {
 
-	extraBytes := make([]byte, 24)
+	extraBytes := make([]byte, ExtraBytesSize)
 
 	extraBytes[0] = EventsV1AppDomain
 

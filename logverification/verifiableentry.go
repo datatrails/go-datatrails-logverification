@@ -38,6 +38,12 @@ import (
  * ( Extra Bytes | IdTimestamp )
  */
 
+const (
+	MMRSaltSize = 32
+
+	IDTimestapSizeBytes = 8
+)
+
 // MMREntryFields are the fields that when hashed result in the MMR Entry
 type MMREntryFields struct {
 
@@ -130,7 +136,7 @@ func (vle *VerifiableLogEntry) MMRIndex() uint64 {
 // this is (extrabytes | idtimestamp) for any apps that adhere to log entry version 1.
 func (ve *VerifiableLogEntry) MMRSalt() ([]byte, error) {
 
-	mmrSalt := make([]byte, 32)
+	mmrSalt := make([]byte, MMRSaltSize)
 
 	copy(mmrSalt[:24], ve.ExtraBytes)
 
@@ -140,7 +146,7 @@ func (ve *VerifiableLogEntry) MMRSalt() ([]byte, error) {
 		return nil, err
 	}
 
-	idTimestampBytes := make([]byte, 8)
+	idTimestampBytes := make([]byte, IDTimestapSizeBytes)
 	binary.BigEndian.PutUint64(idTimestampBytes, idTimestamp)
 
 	copy(mmrSalt[24:], idTimestampBytes)
