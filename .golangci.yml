@@ -145,6 +145,7 @@ linters:
     - gofumpt
     - golint
     - gomoddirectives
+    - gomnd
     - gosec
     - gosimple
     - ifshort
