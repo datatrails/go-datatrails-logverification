@@ -76,7 +76,7 @@ func (g *TestGenerator) NextId() (uint64, error) {
 	var err error
 	var id uint64
 
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		id, err = g.IdState.NextID()
 		if err != nil {
 			if !errors.Is(err, snowflakeid.ErrOverloaded) {
@@ -106,7 +106,7 @@ func (g *TestGenerator) GenerateLeaf(tenantIdentity string, base, i uint64) mmrt
 
 func (g *TestGenerator) GenerateEventBatch(count int) []*v2assets.EventResponse {
 	events := make([]*v2assets.EventResponse, 0, count)
-	for i := 0; i < count; i++ {
+	for range count {
 		events = append(events, g.GenerateNextEvent(mmrtesting.DefaultGeneratorTenantIdentity))
 	}
 	return events
@@ -114,7 +114,7 @@ func (g *TestGenerator) GenerateEventBatch(count int) []*v2assets.EventResponse 
 
 func (g *TestGenerator) GenerateTenantEventMessageBatch(tenantIdentity string, count int) []*azbus.ReceivedMessage {
 	msgs := make([]*azbus.ReceivedMessage, 0, count)
-	for i := 0; i < count; i++ {
+	for range count {
 		event := v2assets.EventMessage{
 			TenantId: tenantIdentity,
 			Event:    g.GenerateNextEvent(tenantIdentity),
