@@ -32,7 +32,7 @@ func serializeTestEvents(t *testing.T, events []*assets.EventResponse) []byte {
 // that our event generator returns, to the VerifiableEvent expected by logverification.
 func protoEventsToVerifiableEvents(t *testing.T, events []*assets.EventResponse) []VerifiableAssetsV2Event {
 	eventJsonList := serializeTestEvents(t, events)
-	result, err := VerifiableAssetsV2Event(eventJsonList)
+	result, err := NewVerifiableAssetsV2Events(eventJsonList)
 	require.NoError(t, err)
 
 	return result
