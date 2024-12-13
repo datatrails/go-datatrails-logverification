@@ -25,20 +25,27 @@ func SetupTest(t *testing.T, testContext mmrtesting.TestContext, testGenerator T
 	tenantID := mmrtesting.DefaultGeneratorTenantIdentity
 
 	// Generate an initial batch of events. These are the last known backed-up events by the user.
-	GenerateTenantLog(&testContext, testGenerator, 7, tenantID, true, TestMassifHeight)
+	eventsToAppend := 7
+	GenerateTenantLog(&testContext, testGenerator, eventsToAppend, tenantID, true, TestMassifHeight)
 	oldMassifContext, err := massifReader.GetMassif(context.TODO(), tenantID, 0)
+
+	expectedRangeCount := 11
 	require.Nil(t, err)
-	require.Equal(t, uint64(11), oldMassifContext.RangeCount())
+	require.Equal(t, uint64(expectedRangeCount), oldMassifContext.RangeCount())
 
 	// Append 4 leaves to the existing Merkle log.
-	appendedEvents := GenerateTenantLog(&testContext, testGenerator, 4, tenantID, false, TestMassifHeight)
+	eventsToAppend = 4
+	appendedEvents := GenerateTenantLog(&testContext, testGenerator, eventsToAppend, tenantID, false, TestMassifHeight)
 	massifContext, err := massifReader.GetMassif(context.TODO(), tenantID, 0)
 	require.Nil(t, err)
 
 	// Check that our test generation code actually appended it. Confirm that the old massif context
 	// hasn't been updated, as it represents the customer's cache of the data.
-	require.Equal(t, uint64(19), massifContext.RangeCount())
-	require.Equal(t, uint64(11), oldMassifContext.RangeCount())
+	expectedRangeCount = 19
+	require.Equal(t, uint64(expectedRangeCount), massifContext.RangeCount())
+
+	expectedRangeCount = 11
+	require.Equal(t, uint64(expectedRangeCount), oldMassifContext.RangeCount())
 
 	// New log is old log plus these appended events
 	lastLogBEvent := appendedEvents[len(appendedEvents)-1]

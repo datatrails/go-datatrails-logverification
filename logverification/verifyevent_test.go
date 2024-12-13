@@ -31,7 +31,7 @@ func TestVerifyEvent(t *testing.T) {
 	eventJSON, err := marshaler.Marshal(event)
 	require.NoError(t, err)
 
-	verifiableEvent, err := NewVerifiableEvent(eventJSON)
+	verifiableEvent, err := NewVerifiableAssetsV2Event(eventJSON)
 	require.NoError(t, err)
 
 	// NOTE: we would usually use azblob.NewReaderNoAuth()

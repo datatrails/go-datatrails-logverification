@@ -10,10 +10,10 @@ import (
 
 func TestVerifiableEvent_Validate(t *testing.T) {
 	type fields struct {
-		EventID   string
-		TenantID  string
-		LeafHash  []byte
-		MerkleLog *assets.MerkleLogEntry
+		AppId           string
+		LogId           []byte
+		MMREntryFields  *MMREntryFields
+		MerkleLogCommit *assets.MerkleLogCommit
 	}
 
 	tests := []struct {
@@ -24,14 +24,12 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 		{
 			name: "valid input returns no error",
 			fields: fields{
-				EventID:  "event/7189fa3d-9af1-40b1-975c-70f792142a82",
-				TenantID: "tenant/7189fa3d-9af1-40b1-975c-70f792142a82",
-				LeafHash: []byte("2091f2349925f93546c54d4140cdca5ab59213ef82daf665d81637260d022069"),
-				MerkleLog: &assets.MerkleLogEntry{
-					Commit: &assets.MerkleLogCommit{
-						Index:       uint64(0),
-						Idtimestamp: "018fa97ef269039b00",
-					},
+				AppId:          "event/7189fa3d-9af1-40b1-975c-70f792142a82",
+				LogId:          []byte{0, 110, 33, 215, 99, 215, 71, 187, 154, 126, 13, 181, 86, 33, 49, 127}, // tenant/006e21d7-63d7-47bb-9a7e-0db55621317f
+				MMREntryFields: nil,
+				MerkleLogCommit: &assets.MerkleLogCommit{
+					Index:       uint64(0),
+					Idtimestamp: "018fa97ef269039b00",
 				},
 			},
 			expectedErr: nil,
@@ -39,14 +37,12 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 		{
 			name: "missing event identity returns specific error",
 			fields: fields{
-				EventID:  "",
-				TenantID: "tenant/7189fa3d-9af1-40b1-975c-70f792142a82",
-				LeafHash: []byte("2091f2349925f93546c54d4140cdca5ab59213ef82daf665d81637260d022069"),
-				MerkleLog: &assets.MerkleLogEntry{
-					Commit: &assets.MerkleLogCommit{
-						Index:       uint64(0),
-						Idtimestamp: "018fa97ef269039b00",
-					},
+				AppId:          "",
+				LogId:          []byte{0, 110, 33, 215, 99, 215, 71, 187, 154, 126, 13, 181, 86, 33, 49, 127}, // tenant/006e21d7-63d7-47bb-9a7e-0db55621317f
+				MMREntryFields: nil,
+				MerkleLogCommit: &assets.MerkleLogCommit{
+					Index:       uint64(0),
+					Idtimestamp: "018fa97ef269039b00",
 				},
 			},
 			expectedErr: ErrNonEmptyEventIDRequired,
@@ -54,14 +50,12 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 		{
 			name: "missing tenant identity returns specific error",
 			fields: fields{
-				EventID:  "event/7189fa3d-9af1-40b1-975c-70f792142a82",
-				TenantID: "",
-				LeafHash: []byte("2091f2349925f93546c54d4140cdca5ab59213ef82daf665d81637260d022069"),
-				MerkleLog: &assets.MerkleLogEntry{
-					Commit: &assets.MerkleLogCommit{
-						Index:       uint64(0),
-						Idtimestamp: "018fa97ef269039b00",
-					},
+				AppId:          "event/7189fa3d-9af1-40b1-975c-70f792142a82",
+				LogId:          []byte{},
+				MMREntryFields: nil,
+				MerkleLogCommit: &assets.MerkleLogCommit{
+					Index:       uint64(0),
+					Idtimestamp: "018fa97ef269039b00",
 				},
 			},
 			expectedErr: ErrNonEmptyTenantIDRequired,
@@ -69,24 +63,22 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 		{
 			name: "missing commit entry returns specific error",
 			fields: fields{
-				EventID:   "event/7189fa3d-9af1-40b1-975c-70f792142a82",
-				TenantID:  "tenant/7189fa3d-9af1-40b1-975c-70f792142a82",
-				LeafHash:  []byte("2091f2349925f93546c54d4140cdca5ab59213ef82daf665d81637260d022069"),
-				MerkleLog: &assets.MerkleLogEntry{},
+				AppId:           "event/7189fa3d-9af1-40b1-975c-70f792142a82",
+				LogId:           []byte{0, 110, 33, 215, 99, 215, 71, 187, 154, 126, 13, 181, 86, 33, 49, 127}, // tenant/006e21d7-63d7-47bb-9a7e-0db55621317f
+				MMREntryFields:  nil,
+				MerkleLogCommit: nil,
 			},
 			expectedErr: ErrCommitEntryRequired,
 		},
 		{
 			name: "missing idtimestamp returns specific error",
 			fields: fields{
-				EventID:  "event/7189fa3d-9af1-40b1-975c-70f792142a82",
-				TenantID: "tenant/7189fa3d-9af1-40b1-975c-70f792142a82",
-				LeafHash: []byte("2091f2349925f93546c54d4140cdca5ab59213ef82daf665d81637260d022069"),
-				MerkleLog: &assets.MerkleLogEntry{
-					Commit: &assets.MerkleLogCommit{
-						Index:       uint64(0),
-						Idtimestamp: "",
-					},
+				AppId:          "event/7189fa3d-9af1-40b1-975c-70f792142a82",
+				LogId:          []byte{0, 110, 33, 215, 99, 215, 71, 187, 154, 126, 13, 181, 86, 33, 49, 127}, // tenant/006e21d7-63d7-47bb-9a7e-0db55621317f
+				MMREntryFields: nil,
+				MerkleLogCommit: &assets.MerkleLogCommit{
+					Index:       uint64(0),
+					Idtimestamp: "",
 				},
 			},
 			expectedErr: ErrIdTimestampRequired,
@@ -94,11 +86,13 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &VerifiableEvent{
-				EventID:   tt.fields.EventID,
-				TenantID:  tt.fields.TenantID,
-				LeafHash:  tt.fields.LeafHash,
-				MerkleLog: tt.fields.MerkleLog,
+			e := &VerifiableAssetsV2Event{
+				VerifiableLogEntry: VerifiableLogEntry{
+					AppId:           tt.fields.AppId,
+					LogId:           tt.fields.LogId,
+					MMREntryFields:  tt.fields.MMREntryFields,
+					MerkleLogCommit: tt.fields.MerkleLogCommit,
+				},
 			}
 
 			err := e.Validate()

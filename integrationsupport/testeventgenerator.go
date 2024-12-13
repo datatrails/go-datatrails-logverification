@@ -76,13 +76,15 @@ func (g *TestGenerator) NextId() (uint64, error) {
 	var err error
 	var id uint64
 
-	for i := 0; i < 2; i++ {
+	var msSleepDuration = 2
+
+	for range 2 {
 		id, err = g.IdState.NextID()
 		if err != nil {
 			if !errors.Is(err, snowflakeid.ErrOverloaded) {
 				return 0, err
 			}
-			time.Sleep(time.Millisecond * 2)
+			time.Sleep(time.Millisecond * time.Duration(msSleepDuration))
 		}
 	}
 	return id, nil
@@ -106,7 +108,7 @@ func (g *TestGenerator) GenerateLeaf(tenantIdentity string, base, i uint64) mmrt
 
 func (g *TestGenerator) GenerateEventBatch(count int) []*v2assets.EventResponse {
 	events := make([]*v2assets.EventResponse, 0, count)
-	for i := 0; i < count; i++ {
+	for range count {
 		events = append(events, g.GenerateNextEvent(mmrtesting.DefaultGeneratorTenantIdentity))
 	}
 	return events
@@ -114,7 +116,7 @@ func (g *TestGenerator) GenerateEventBatch(count int) []*v2assets.EventResponse 
 
 func (g *TestGenerator) GenerateTenantEventMessageBatch(tenantIdentity string, count int) []*azbus.ReceivedMessage {
 	msgs := make([]*azbus.ReceivedMessage, 0, count)
-	for i := 0; i < count; i++ {
+	for range count {
 		event := v2assets.EventMessage{
 			TenantId: tenantIdentity,
 			Event:    g.GenerateNextEvent(tenantIdentity),
@@ -138,13 +140,17 @@ func (g *TestGenerator) GenerateNextEvent(tenantIdentity string) *v2assets.Event
 	assetIdentity := g.NewAssetIdentity()
 	assetUUID := strings.Split(assetIdentity, "/")[1]
 
-	name := strings.Join(g.WordList(2), "")
+	wordCount := 2
+	name := strings.Join(g.WordList(wordCount), "")
 	email := fmt.Sprintf("%s@datatrails.com", name)
 	subject := strconv.Itoa(g.Intn(math.MaxInt))
 
 	// Use the desired event rate as the upper bound, and generate a time stamp at lastTime + rand(0, upper-bound * 2)
 	// So the generated event stream will be around the target rate.
 	ts := g.SinceLastJitter()
+
+	firstAttributeWordString := 6
+	secondAttributeWordString := 4
 
 	event := &v2assets.EventResponse{
 		Identity:      g.NewEventIdentity(assetUUID),
@@ -163,14 +169,14 @@ func (g *TestGenerator) GenerateNextEvent(tenantIdentity string) *v2assets.Event
 
 			"event-attribute-0": {
 				Value: &attribute.Attribute_StrVal{
-					StrVal: g.MultiWordString(6),
+					StrVal: g.MultiWordString(firstAttributeWordString),
 				},
 			},
 		},
 		AssetAttributes: map[string]*attribute.Attribute{
 			"asset-attribute-0": {
 				Value: &attribute.Attribute_StrVal{
-					StrVal: g.MultiWordString(4),
+					StrVal: g.MultiWordString(secondAttributeWordString),
 				},
 			},
 		},
