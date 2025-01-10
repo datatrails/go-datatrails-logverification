@@ -169,3 +169,8 @@ func (ve *VerifiableEventsV1Event) LogTenant() (string, error) {
 
 	return fmt.Sprintf("tenant/%s", logTenantUuid.String()), nil
 }
+
+// GetVerifiableLogEntry gets the verifiable log entry
+func (ve *VerifiableEventsV1Event) GetVerifiableLogEntry() *VerifiableLogEntry {
+	return &ve.VerifiableLogEntry
+}
