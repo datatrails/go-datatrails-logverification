@@ -153,7 +153,7 @@ func (ve *VerifiableLogEntry) MMRSalt() ([]byte, error) {
 }
 
 // massif gets the massif context for the VerifiableLogEntry.
-func (vle *VerifiableLogEntry) massif(reader massifs.MassifReader, options ...MassifOption) (*massifs.MassifContext, error) {
+func (vle *VerifiableLogEntry) massif(reader *massifs.MassifReader, options ...MassifOption) (*massifs.MassifContext, error) {
 
 	massifOptions := ParseMassifOptions(options...)
 	massifHeight := massifOptions.massifHeight
@@ -167,7 +167,7 @@ func (vle *VerifiableLogEntry) massif(reader massifs.MassifReader, options ...Ma
 	// log identity is currently `tenant/logid`
 	logIdentity := fmt.Sprintf("tenant/%s", logUuid.String())
 
-	return Massif(vle.MerkleLogCommit.Index, reader, logIdentity, massifHeight)
+	return Massif(vle.MerkleLogCommit.Index, *reader, logIdentity, massifHeight)
 
 }
 
@@ -175,7 +175,7 @@ func (vle *VerifiableLogEntry) massif(reader massifs.MassifReader, options ...Ma
 // against the immutable merkle log, acquired using the given reader.
 //
 // Returns true if the event is included on the log, otherwise false.
-func (vle *VerifiableLogEntry) VerifyInclusion(reader massifs.MassifReader, options ...MassifOption) (bool, error) {
+func (vle *VerifiableLogEntry) VerifyInclusion(reader *massifs.MassifReader, options ...MassifOption) (bool, error) {
 
 	massif, err := vle.massif(reader, options...)
 
