@@ -332,7 +332,7 @@ func VerifyEventInList(
 	// We now do an inclusion proof on the event, to prove that the event is included at the leaf node.
 
 	// Ensure we're using the correct massif for the current leaf
-	err := UpdateMassifContext(reader, massifContext, leafMMRIndex, tenantID, DefaultMassifHeight)
+	err := UpdateMassifContext(&reader, massifContext, leafMMRIndex, tenantID, DefaultMassifHeight)
 	if err != nil {
 		return Unknown, err
 	}

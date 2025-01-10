@@ -21,7 +21,7 @@ var (
 // Massif gets the massif (blob) that contains the given mmrIndex, from azure blob storage
 //
 //	defined by the azblob configuration.
-func Massif(mmrIndex uint64, massifReader massifs.MassifReader, tenantId string, massifHeight uint8) (*massifs.MassifContext, error) {
+func Massif(mmrIndex uint64, massifReader MassifGetter, tenantId string, massifHeight uint8) (*massifs.MassifContext, error) {
 
 	massifIndex := massifs.MassifIndexFromMMRIndex(massifHeight, mmrIndex)
 
@@ -54,7 +54,7 @@ func MassifFromEvent(verifiableEvent *VerifiableAssetsV2Event, reader azblob.Rea
 	}
 
 	massifReader := massifs.NewMassifReader(logger.Sugar, reader)
-	return Massif(verifiableEvent.MerkleLogCommit.Index, massifReader, tenantId, massifHeight)
+	return Massif(verifiableEvent.MerkleLogCommit.Index, &massifReader, tenantId, massifHeight)
 }
 
 // ChooseHashingSchema chooses the hashing schema based on the log version in the massif blob start record.
@@ -75,7 +75,7 @@ func ChooseHashingSchema(massifStart massifs.MassifStart) (EventHasher, error) {
 //
 // A Massif is a blob that contains a portion of the merkle log.
 // A MassifContext is the context used to get specific massifs.
-func UpdateMassifContext(massifReader massifs.MassifReader, massifContext *massifs.MassifContext, mmrIndex uint64, tenantID string, massifHeight uint8) error {
+func UpdateMassifContext(massifReader MassifGetter, massifContext *massifs.MassifContext, mmrIndex uint64, tenantID string, massifHeight uint8) error {
 
 	// there is a chance here that massifContext is nil, in this case we can't do anything
 	//  as we set the massifContext as a side effect, and there is no pointer value.
