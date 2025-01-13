@@ -31,7 +31,7 @@ type EventsV1AppEntry struct {
 
 // NewEventsV1AppEntries takes a list of events JSON (e.g. from the events list API), converts them
 // into EventsV1AppEntries and then returns them sorted by ascending MMR index.
-func NewEventsV1AppEntries(eventsJson []byte, logTenant string) ([]EventsV1AppEntry, error) {
+func NewEventsV1AppEntries(eventsJson []byte, logTenant string) ([]*EventsV1AppEntry, error) {
 	// get the event list out of events
 	eventListJson := struct {
 		Events []json.RawMessage `json:"events"`
@@ -42,14 +42,14 @@ func NewEventsV1AppEntries(eventsJson []byte, logTenant string) ([]EventsV1AppEn
 		return nil, err
 	}
 
-	events := []EventsV1AppEntry{}
+	events := []*EventsV1AppEntry{}
 	for _, eventJson := range eventListJson.Events {
 		verifiableEvent, err := NewEventsV1AppEntry(eventJson, logTenant)
 		if err != nil {
 			return nil, err
 		}
 
-		events = append(events, *verifiableEvent)
+		events = append(events, verifiableEvent)
 	}
 
 	// Sorting the events by MMR index guarantees that they're sorted in log append order.

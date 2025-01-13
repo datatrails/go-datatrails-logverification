@@ -23,7 +23,7 @@ type AssetsV2AppEntry struct {
 
 // NewAssetsV2AppEntries takes a list of events JSON (e.g. from the assetsv2 events list API), converts them
 // into AssetsV2AppEntries and then returns them sorted by ascending MMR index.
-func NewAssetsV2AppEntries(eventsJson []byte) ([]AssetsV2AppEntry, error) {
+func NewAssetsV2AppEntries(eventsJson []byte) ([]*AssetsV2AppEntry, error) {
 	// get the event list out of events
 	eventListJson := struct {
 		Events []json.RawMessage `json:"events"`
@@ -34,14 +34,14 @@ func NewAssetsV2AppEntries(eventsJson []byte) ([]AssetsV2AppEntry, error) {
 		return nil, err
 	}
 
-	events := []AssetsV2AppEntry{}
+	events := []*AssetsV2AppEntry{}
 	for _, eventJson := range eventListJson.Events {
 		verifiableEvent, err := NewAssetsV2AppEntry(eventJson)
 		if err != nil {
 			return nil, err
 		}
 
-		events = append(events, *verifiableEvent)
+		events = append(events, verifiableEvent)
 	}
 
 	// Sorting the events by MMR index guarantees that they're sorted in log append order.
