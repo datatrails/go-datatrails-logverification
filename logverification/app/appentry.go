@@ -170,20 +170,21 @@ func (ae *AppEntry) LogTenant() (string, error) {
 
 }
 
-// Massif gets the massif context, for the massif of the corresponding log entry from the app data.
-//
-// The following massif options can be used, in priority order:
-//   - WithMassifContext
-//   - WithMassifReader
-//   - WithAzblobReader
-//
-// Example WithMassifReader:
-//
-// WithMassifReader(
-// reader,
-// logverification.WithMassifTenantId("tenant/foo"),
-// logverification.WithMassifHeight(14),
-// )
+/** Massif gets the massif context, for the massif of the corresponding log entry from the app data.
+ *
+ * The following massif options can be used, in priority order:
+ *   - WithMassifContext
+ *   - WithMassifReader
+ *   - WithAzblobReader
+ *
+ * Example WithMassifReader:
+ *
+ * WithMassifReader(
+ *   reader,
+ *   WithMassifTenantId("tenant/foo"),
+ *   WithMassifHeight(14),
+ * )
+ */
 func (ae *AppEntry) Massif(options ...MassifGetterOption) (*massifs.MassifContext, error) {
 
 	massifOptions := ParseMassifGetterOptions(options...)
