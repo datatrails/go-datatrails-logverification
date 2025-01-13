@@ -5,8 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/datatrails/go-datatrails-common/azblob"
-	"github.com/datatrails/go-datatrails-common/logger"
 	"github.com/datatrails/go-datatrails-logverification/logverification/app"
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
 )
@@ -41,27 +39,6 @@ func Massif(mmrIndex uint64, massifReader MassifGetter, tenantId string, massifH
 	}
 
 	return &massif, nil
-}
-
-// MassifFromEvent gets the massif (blob) that contains the given event, from azure blob storage
-// defined by the azblob configuration.
-func MassifFromEvent(verifiableEvent *app.AssetsV2AppEntry, reader azblob.Reader, options ...MassifOption) (*massifs.MassifContext, error) {
-	massifOptions := ParseMassifOptions(options...)
-	massifHeight := massifOptions.MassifHeight
-
-	// if tenant ID is not supplied, find it based on the given eventJson
-	tenantId := massifOptions.TenantId
-	if tenantId == "" {
-
-		var err error
-		tenantId, err = verifiableEvent.LogTenant()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	massifReader := massifs.NewMassifReader(logger.Sugar, reader)
-	return Massif(verifiableEvent.MerkleLogCommit.Index, &massifReader, tenantId, massifHeight)
 }
 
 // ChooseHashingSchema chooses the hashing schema based on the log version in the massif blob start record.

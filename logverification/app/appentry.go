@@ -14,7 +14,8 @@ import (
 )
 
 /**
- * Verifiable :Log Entry is a Log Entry that can be verified.
+ * AppEntry is the app provided data for a corresponding log entry.
+ * An AppEntry will derive fields used for log entry inclusion verification.
  *
  * The format for an MMR entry is the following:
  *
