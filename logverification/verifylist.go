@@ -170,7 +170,7 @@ var (
  *                  to be included on. E.g. the public tenant
  *                  for public events.
  */
-func VerifyList(reader azblob.Reader, eventList []app.AssetsV2AppEntry, options ...VerifyOption) ([]uint64, error) {
+func VerifyList(reader azblob.Reader, eventList []*app.AssetsV2AppEntry, options ...VerifyOption) ([]uint64, error) {
 
 	verifyOptions := ParseOptions(options...)
 
@@ -207,7 +207,7 @@ func VerifyList(reader azblob.Reader, eventList []app.AssetsV2AppEntry, options 
 
 		}
 
-		eventType, err := VerifyEventInList(hasher, leafIndex, event, massifReader, &massifContext, tenantId)
+		eventType, err := VerifyEventInList(hasher, leafIndex, *event, massifReader, &massifContext, tenantId)
 		if err != nil {
 
 			// NOTE: for now fail at the first sign of an EXCLUDED event.
