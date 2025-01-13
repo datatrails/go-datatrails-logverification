@@ -1,8 +1,7 @@
-package logverification
+package app
 
 import (
 	"encoding/json"
-	"fmt"
 	"sort"
 	"strings"
 
@@ -25,14 +24,14 @@ const (
 	ExtraBytesSize = 24
 )
 
-// VerifiableEventsV1Event contains key information for verifying inclusion of merkle log events
-type VerifiableEventsV1Event struct {
-	VerifiableLogEntry
+// EventsV1AppEntry is the assetsv2 app provided data for a corresponding log entry.
+type EventsV1AppEntry struct {
+	*AppEntry
 }
 
-// NewVerifiableEventsV1Events takes a list of events JSON (e.g. from the events list API), converts them
-// into VerifiableEventsV1Event and then returns them sorted by ascending MMR index.
-func NewVerifiableEventsV1Events(eventsJson []byte, logTenant string) ([]VerifiableEventsV1Event, error) {
+// NewEventsV1AppEntries takes a list of events JSON (e.g. from the events list API), converts them
+// into EventsV1AppEntries and then returns them sorted by ascending MMR index.
+func NewEventsV1AppEntries(eventsJson []byte, logTenant string) ([]EventsV1AppEntry, error) {
 	// get the event list out of events
 	eventListJson := struct {
 		Events []json.RawMessage `json:"events"`
@@ -43,9 +42,9 @@ func NewVerifiableEventsV1Events(eventsJson []byte, logTenant string) ([]Verifia
 		return nil, err
 	}
 
-	events := []VerifiableEventsV1Event{}
+	events := []EventsV1AppEntry{}
 	for _, eventJson := range eventListJson.Events {
-		verifiableEvent, err := NewVerifiableEventsV1Event(eventJson, logTenant)
+		verifiableEvent, err := NewEventsV1AppEntry(eventJson, logTenant)
 		if err != nil {
 			return nil, err
 		}
@@ -63,7 +62,7 @@ func NewVerifiableEventsV1Events(eventsJson []byte, logTenant string) ([]Verifia
 
 // NewVerifiableEventsV1Events takes a single eventsv1 event JSON and returns a VerifiableEventsV1Event,
 // providing just enough information to verify and identify the event.
-func NewVerifiableEventsV1Event(eventJson []byte, logTenant string, opts ...VerifiableLogEntryOption) (*VerifiableEventsV1Event, error) {
+func NewEventsV1AppEntry(eventJson []byte, logTenant string) (*EventsV1AppEntry, error) {
 
 	// special care is needed here to deal with uint64 types. json marshal /
 	// un marshal treats them as strings because they don't fit in a
@@ -118,19 +117,16 @@ func NewVerifiableEventsV1Event(eventJson []byte, logTenant string, opts ...Veri
 		return nil, err
 	}
 
-	verifableLogEntryOptions := ParseVerifableLogEntryOptions()
-
-	return &VerifiableEventsV1Event{
-		VerifiableLogEntry: VerifiableLogEntry{
+	return &EventsV1AppEntry{
+		AppEntry: &AppEntry{
 			AppId: entry.Identity,
 			LogId: logId[:],
 			MMREntryFields: &MMREntryFields{
 				Domain:          byte(0),
 				SerializedBytes: serializedBytes,
 			},
-			ExtraBytes:       extraBytes,
-			MerkleLogCommit:  merkleLogCommit,
-			MerkleLogConfirm: verifableLogEntryOptions.merkleLogConfirm,
+			ExtraBytes:      extraBytes,
+			MerkleLogCommit: merkleLogCommit,
 		},
 	}, nil
 }
@@ -157,20 +153,7 @@ func NewEventsV1ExtraBytes(originTenant string) ([]byte, error) {
 	return extraBytes, nil
 }
 
-// LogTenant returns the Log tenant that committed this assetsv2 event to the log
-//
-// as a tenant identity.
-func (ve *VerifiableEventsV1Event) LogTenant() (string, error) {
-
-	logTenantUuid, err := uuid.FromBytes(ve.LogId)
-	if err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf("tenant/%s", logTenantUuid.String()), nil
-}
-
 // GetVerifiableLogEntry gets the verifiable log entry
-func (ve *VerifiableEventsV1Event) GetVerifiableLogEntry() *VerifiableLogEntry {
-	return &ve.VerifiableLogEntry
+func (ve *EventsV1AppEntry) GetVerifiableLogEntry() *AppEntry {
+	return ve.AppEntry
 }

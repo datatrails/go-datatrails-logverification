@@ -1,4 +1,4 @@
-package logverification
+package app
 
 import (
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
@@ -29,7 +29,7 @@ func NewLogVersion0Hasher() *LogVersion0Hasher {
 //   - id timestamp is the timestamp id found on the event merklelog entry
 //   - simplehashv3 is the datatrails simplehash v3 schema for hashing datatrails events
 func (h *LogVersion0Hasher) HashEvent(eventJson []byte) ([]byte, error) {
-	merkleLogEntry, err := MerklelogEntry(eventJson)
+	assetsAppEntry, err := NewAssetsV2AppEntry(eventJson)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (h *LogVersion0Hasher) HashEvent(eventJson []byte) ([]byte, error) {
 	}
 
 	// the idCommitted is in hex from the event, we need to convert it to uint64
-	idCommitted, _, err := massifs.SplitIDTimestampHex(merkleLogEntry.Commit.Idtimestamp)
+	idCommitted, _, err := massifs.SplitIDTimestampHex(assetsAppEntry.MerkleLogCommit.Idtimestamp)
 	if err != nil {
 		return nil, err
 	}

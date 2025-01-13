@@ -1,4 +1,4 @@
-package logverification
+package app
 
 type MassifOptions struct {
 

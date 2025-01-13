@@ -1,6 +1,9 @@
 package logverification
 
-import "github.com/datatrails/go-datatrails-merklelog/mmr"
+import (
+	"github.com/datatrails/go-datatrails-logverification/logverification/app"
+	"github.com/datatrails/go-datatrails-merklelog/mmr"
+)
 
 /**
  * Leaf Range holds utilities for finding the range of leaves in the merkle log to
@@ -12,7 +15,7 @@ import "github.com/datatrails/go-datatrails-merklelog/mmr"
 //	events, that have been sorted from lowest mmr index to highest mmr index.
 //
 // Returns the lower and upper bound of the leaf indexes for the leaf range.
-func LeafRange(sortedEvents []VerifiableAssetsV2Event) (uint64, uint64) {
+func LeafRange(sortedEvents []app.AssetsV2AppEntry) (uint64, uint64) {
 
 	lowerBoundMMRIndex := sortedEvents[0].MerkleLogCommit.Index
 	lowerBoundLeafIndex := mmr.LeafCount(lowerBoundMMRIndex+1) - 1 // Note: LeafCount takes an mmrIndex here not a size

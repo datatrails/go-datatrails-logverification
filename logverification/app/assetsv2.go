@@ -1,12 +1,13 @@
-package logverification
+package app
 
 import (
+	"crypto/sha256"
 	"encoding/json"
-	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
+	"github.com/datatrails/go-datatrails-merklelog/mmr"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -15,14 +16,14 @@ import (
  * assetsv2 contains all log entry specific functions for the assetsv2 app (app domain 0).
  */
 
-// VerifiableAssetsV2Event contains key information for verifying inclusion of merkle log events
-type VerifiableAssetsV2Event struct {
-	VerifiableLogEntry
+// AssetsV2AppEntry is the assetsv2 app provided data for a corresponding log entry.
+type AssetsV2AppEntry struct {
+	*AppEntry
 }
 
-// NewVerifiableAssetsV2Events takes a list of events JSON (e.g. from the events list API), converts them
-// into VerifiableAssetsV2Events and then returns them sorted by ascending MMR index.
-func NewVerifiableAssetsV2Events(eventsJson []byte) ([]VerifiableAssetsV2Event, error) {
+// NewAssetsV2AppEntries takes a list of events JSON (e.g. from the assetsv2 events list API), converts them
+// into AssetsV2AppEntries and then returns them sorted by ascending MMR index.
+func NewAssetsV2AppEntries(eventsJson []byte) ([]AssetsV2AppEntry, error) {
 	// get the event list out of events
 	eventListJson := struct {
 		Events []json.RawMessage `json:"events"`
@@ -33,9 +34,9 @@ func NewVerifiableAssetsV2Events(eventsJson []byte) ([]VerifiableAssetsV2Event, 
 		return nil, err
 	}
 
-	events := []VerifiableAssetsV2Event{}
+	events := []AssetsV2AppEntry{}
 	for _, eventJson := range eventListJson.Events {
-		verifiableEvent, err := NewVerifiableAssetsV2Event(eventJson)
+		verifiableEvent, err := NewAssetsV2AppEntry(eventJson)
 		if err != nil {
 			return nil, err
 		}
@@ -51,9 +52,9 @@ func NewVerifiableAssetsV2Events(eventsJson []byte) ([]VerifiableAssetsV2Event, 
 	return events, nil
 }
 
-// NewVerifiableAssetsV2Events takes a single assetsv2 event JSON and returns a VerifiableAssetsV2Event,
-// providing just enough information to verify and identify the event.
-func NewVerifiableAssetsV2Event(eventJson []byte) (*VerifiableAssetsV2Event, error) {
+// NewAssetsV2AppEntry takes a single assetsv2 event JSON and returns an AssetsV2AppEntry,
+// providing just enough information to verify the incluson of and identify the event.
+func NewAssetsV2AppEntry(eventJson []byte) (*AssetsV2AppEntry, error) {
 
 	// special care is needed here to deal with uint64 types. json marshal /
 	// un marshal treats them as strings because they don't fit in a
@@ -86,8 +87,8 @@ func NewVerifiableAssetsV2Event(eventJson []byte) (*VerifiableAssetsV2Event, err
 		return nil, err
 	}
 
-	return &VerifiableAssetsV2Event{
-		VerifiableLogEntry: VerifiableLogEntry{
+	return &AssetsV2AppEntry{
+		AppEntry: &AppEntry{
 			AppId: entry.Identity,
 			LogId: logId[:],
 			MMREntryFields: &MMREntryFields{
@@ -100,13 +101,14 @@ func NewVerifiableAssetsV2Event(eventJson []byte) (*VerifiableAssetsV2Event, err
 	}, nil
 }
 
-// MMREntry gets the MMR Entry from the VerifiableAssetsV2Event
+// MMREntry derives the mmr entry of the corresponding log entry from the assetsv2 app data.
+//
 // for assetsv2 this is simplehashv3 hash and the 'serializedBytes' is the original
 // event json.
 //
 // NOTE: the original event json isn't really serializedbytes, but the LogVersion0 hasher includes
 // the serialization.
-func (ve *VerifiableAssetsV2Event) MMREntry() ([]byte, error) {
+func (ve *AssetsV2AppEntry) MMREntry() ([]byte, error) {
 	hasher := LogVersion0Hasher{}
 	eventHash, err := hasher.HashEvent(ve.MMREntryFields.SerializedBytes)
 	if err != nil {
@@ -116,28 +118,59 @@ func (ve *VerifiableAssetsV2Event) MMREntry() ([]byte, error) {
 	return eventHash, nil
 }
 
-// MMRSalt gets the MMR Salt, which is the datatrails provided fields included on the MMR Entry.
+// MMRSalt derives the MMR Salt of the corresponding log entry from the app data.
+// MMRSalt is the datatrails provided fields included on the MMR Entry.
 //
 // For assetsv2 events this is empty.
-func (ve *VerifiableAssetsV2Event) MMRSalt() ([]byte, error) {
+func (ve *AssetsV2AppEntry) MMRSalt() ([]byte, error) {
 	return []byte{}, nil // MMRSalt is always empty for assetsv2 events
 }
 
-// LogTenant returns the Log tenant that committed this assetsv2 event to the log
-//
-// as a tenant identity.
-func (ve *VerifiableAssetsV2Event) LogTenant() (string, error) {
+// VerifyProof verifies the given inclusion proof of the corresponding log entry for the app data.
+func (ae *AssetsV2AppEntry) VerifyProof(proof [][]byte, options ...MassifGetterOption) (bool, error) {
 
-	logTenantUuid, err := uuid.FromBytes(ve.LogId)
+	massif, err := ae.Massif(options...)
+
 	if err != nil {
-		return "", err
+		return false, err
 	}
 
-	return fmt.Sprintf("tenant/%s", logTenantUuid.String()), nil
+	// Get the size of the complete tenant MMR
+	mmrSize := massif.RangeCount()
+
+	hasher := sha256.New()
+
+	mmrEntry, err := ae.MMREntry()
+	if err != nil {
+		return false, err
+	}
+
+	return mmr.VerifyInclusion(massif, hasher, mmrSize, mmrEntry,
+		ae.MMRIndex(), proof)
 
 }
 
-// GetVerifiableLogEntry gets the verifiable log entry
-func (ve *VerifiableAssetsV2Event) GetVerifiableLogEntry() *VerifiableLogEntry {
-	return &ve.VerifiableLogEntry
+// VerifyInclusion verifies the inclusion of the app entry
+// against the corresponding log entry in immutable merkle log
+//
+// Returns true if the app entry is included on the log, otherwise false.
+func (ae *AssetsV2AppEntry) VerifyInclusion(options ...MassifGetterOption) (bool, error) {
+
+	massif, err := ae.Massif(options...)
+
+	if err != nil {
+		return false, err
+	}
+
+	proof, err := ae.Proof(WithMassifContext(massif))
+	if err != nil {
+		return false, err
+	}
+
+	return ae.VerifyProof(proof, WithMassifContext(massif))
+}
+
+// GetAppEntry gets the generic app entry.
+func (ve *AssetsV2AppEntry) GetAppEntry() *AppEntry {
+	return ve.AppEntry
 }

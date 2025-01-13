@@ -7,6 +7,7 @@ import (
 
 	"github.com/datatrails/go-datatrails-common/azblob"
 	"github.com/datatrails/go-datatrails-common/logger"
+	"github.com/datatrails/go-datatrails-logverification/logverification/app"
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
 )
 
@@ -17,6 +18,12 @@ const (
 var (
 	ErrNilMassifContext = errors.New("nil massif context")
 )
+
+type MassifGetter interface {
+	GetMassif(
+		ctx context.Context, tenantIdentity string, massifIndex uint64, opts ...massifs.ReaderOption,
+	) (massifs.MassifContext, error)
+}
 
 // Massif gets the massif (blob) that contains the given mmrIndex, from azure blob storage
 //
@@ -38,12 +45,12 @@ func Massif(mmrIndex uint64, massifReader MassifGetter, tenantId string, massifH
 
 // MassifFromEvent gets the massif (blob) that contains the given event, from azure blob storage
 // defined by the azblob configuration.
-func MassifFromEvent(verifiableEvent *VerifiableAssetsV2Event, reader azblob.Reader, options ...MassifOption) (*massifs.MassifContext, error) {
+func MassifFromEvent(verifiableEvent *app.AssetsV2AppEntry, reader azblob.Reader, options ...MassifOption) (*massifs.MassifContext, error) {
 	massifOptions := ParseMassifOptions(options...)
-	massifHeight := massifOptions.massifHeight
+	massifHeight := massifOptions.MassifHeight
 
 	// if tenant ID is not supplied, find it based on the given eventJson
-	tenantId := massifOptions.tenantId
+	tenantId := massifOptions.TenantId
 	if tenantId == "" {
 
 		var err error
@@ -63,7 +70,7 @@ func ChooseHashingSchema(massifStart massifs.MassifStart) (EventHasher, error) {
 
 	switch massifStart.Version {
 	case 0:
-		return NewLogVersion0Hasher(), nil
+		return app.NewLogVersion0Hasher(), nil
 	default:
 		return nil, errors.New("no hashing scheme for log version")
 	}

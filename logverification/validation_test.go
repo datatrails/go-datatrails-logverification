@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
+	"github.com/datatrails/go-datatrails-logverification/logverification/app"
 	"github.com/datatrails/go-datatrails-simplehash/simplehash"
 	"github.com/stretchr/testify/assert"
 )
@@ -12,7 +13,7 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 	type fields struct {
 		AppId           string
 		LogId           []byte
-		MMREntryFields  *MMREntryFields
+		MMREntryFields  *app.MMREntryFields
 		MerkleLogCommit *assets.MerkleLogCommit
 	}
 
@@ -86,8 +87,8 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &VerifiableAssetsV2Event{
-				VerifiableLogEntry: VerifiableLogEntry{
+			e := &app.AssetsV2AppEntry{
+				AppEntry: &app.AppEntry{
 					AppId:           tt.fields.AppId,
 					LogId:           tt.fields.LogId,
 					MMREntryFields:  tt.fields.MMREntryFields,
@@ -95,7 +96,7 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 				},
 			}
 
-			err := e.Validate()
+			err := Validate(e)
 			assert.ErrorIs(t, err, tt.expectedErr)
 		})
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/datatrails/go-datatrails-common/azblob"
 	"github.com/datatrails/go-datatrails-common/logger"
+	"github.com/datatrails/go-datatrails-logverification/logverification/app"
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
 	"github.com/datatrails/go-datatrails-merklelog/mmr"
 )
@@ -169,7 +170,7 @@ var (
  *                  to be included on. E.g. the public tenant
  *                  for public events.
  */
-func VerifyList(reader azblob.Reader, eventList []VerifiableAssetsV2Event, options ...VerifyOption) ([]uint64, error) {
+func VerifyList(reader azblob.Reader, eventList []app.AssetsV2AppEntry, options ...VerifyOption) ([]uint64, error) {
 
 	verifyOptions := ParseOptions(options...)
 
@@ -237,7 +238,7 @@ func VerifyList(reader azblob.Reader, eventList []VerifiableAssetsV2Event, optio
 func VerifyEventInList(
 	hasher hash.Hash,
 	leafIndex uint64,
-	event VerifiableAssetsV2Event,
+	event app.AssetsV2AppEntry,
 	reader massifs.MassifReader,
 	massifContext *massifs.MassifContext,
 	tenantID string,

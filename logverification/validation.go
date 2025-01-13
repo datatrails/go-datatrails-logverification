@@ -1,6 +1,10 @@
 package logverification
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/datatrails/go-datatrails-logverification/logverification/app"
+)
 
 // Note: We need this logic to detect incomplete JSON unmarshalled into these types. This should
 // eventually be replaced by JSON Schema validation. We believe its a problem to solve for the
@@ -17,20 +21,20 @@ var (
 
 // Validate performs basic validation on the VerifiableEvent, ensuring that critical fields
 // are present.
-func (e *VerifiableAssetsV2Event) Validate() error {
-	if e.AppId == "" {
+func Validate(appEntry *app.AssetsV2AppEntry) error {
+	if appEntry.AppId == "" {
 		return ErrNonEmptyEventIDRequired
 	}
 
-	if len(e.LogId) == 0 {
+	if len(appEntry.LogId) == 0 {
 		return ErrNonEmptyTenantIDRequired
 	}
 
-	if e.MerkleLogCommit == nil {
+	if appEntry.MerkleLogCommit == nil {
 		return ErrCommitEntryRequired
 	}
 
-	if e.MerkleLogCommit.Idtimestamp == "" {
+	if appEntry.MerkleLogCommit.Idtimestamp == "" {
 		return ErrIdTimestampRequired
 	}
 
