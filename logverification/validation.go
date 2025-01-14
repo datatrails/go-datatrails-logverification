@@ -13,17 +13,18 @@ import (
 // before.
 
 var (
+	ErrNonEmptyAppIDRequired    = errors.New("app id field is required and must be non-empty")
 	ErrNonEmptyEventIDRequired  = errors.New("event identity field is required and must be non-empty")
 	ErrNonEmptyTenantIDRequired = errors.New("tenant identity field is required and must be non-empty")
 	ErrCommitEntryRequired      = errors.New("merkle log commit field is required")
 	ErrIdTimestampRequired      = errors.New("idtimestamp field is required and must be non-empty")
 )
 
-// Validate performs basic validation on the VerifiableEvent, ensuring that critical fields
+// Validate performs basic validation on the AppEntryGetter, ensuring that critical fields
 // are present.
 func Validate(appEntry app.AppEntryGetter) error {
 	if appEntry.AppID() == "" {
-		return ErrNonEmptyEventIDRequired
+		return ErrNonEmptyAppIDRequired
 	}
 
 	if len(appEntry.LogID()) == 0 {
