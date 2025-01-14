@@ -46,7 +46,7 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 					Idtimestamp: "018fa97ef269039b00",
 				},
 			},
-			expectedErr: ErrNonEmptyEventIDRequired,
+			expectedErr: ErrNonEmptyAppIDRequired,
 		},
 		{
 			name: "missing tenant identity returns specific error",
