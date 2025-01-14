@@ -11,10 +11,10 @@ import (
 
 func TestVerifiableEvent_Validate(t *testing.T) {
 	type fields struct {
-		AppId           string
-		LogId           []byte
-		MMREntryFields  *app.MMREntryFields
-		MerkleLogCommit *assets.MerkleLogCommit
+		appID           string
+		logID           []byte
+		mmrEntryFields  *app.MMREntryFields
+		merkleLogCommit *assets.MerkleLogCommit
 	}
 
 	tests := []struct {
@@ -25,10 +25,10 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 		{
 			name: "valid input returns no error",
 			fields: fields{
-				AppId:          "event/7189fa3d-9af1-40b1-975c-70f792142a82",
-				LogId:          []byte{0, 110, 33, 215, 99, 215, 71, 187, 154, 126, 13, 181, 86, 33, 49, 127}, // tenant/006e21d7-63d7-47bb-9a7e-0db55621317f
-				MMREntryFields: nil,
-				MerkleLogCommit: &assets.MerkleLogCommit{
+				appID:          "event/7189fa3d-9af1-40b1-975c-70f792142a82",
+				logID:          []byte{0, 110, 33, 215, 99, 215, 71, 187, 154, 126, 13, 181, 86, 33, 49, 127}, // tenant/006e21d7-63d7-47bb-9a7e-0db55621317f
+				mmrEntryFields: nil,
+				merkleLogCommit: &assets.MerkleLogCommit{
 					Index:       uint64(0),
 					Idtimestamp: "018fa97ef269039b00",
 				},
@@ -38,10 +38,10 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 		{
 			name: "missing event identity returns specific error",
 			fields: fields{
-				AppId:          "",
-				LogId:          []byte{0, 110, 33, 215, 99, 215, 71, 187, 154, 126, 13, 181, 86, 33, 49, 127}, // tenant/006e21d7-63d7-47bb-9a7e-0db55621317f
-				MMREntryFields: nil,
-				MerkleLogCommit: &assets.MerkleLogCommit{
+				appID:          "",
+				logID:          []byte{0, 110, 33, 215, 99, 215, 71, 187, 154, 126, 13, 181, 86, 33, 49, 127}, // tenant/006e21d7-63d7-47bb-9a7e-0db55621317f
+				mmrEntryFields: nil,
+				merkleLogCommit: &assets.MerkleLogCommit{
 					Index:       uint64(0),
 					Idtimestamp: "018fa97ef269039b00",
 				},
@@ -51,10 +51,10 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 		{
 			name: "missing tenant identity returns specific error",
 			fields: fields{
-				AppId:          "event/7189fa3d-9af1-40b1-975c-70f792142a82",
-				LogId:          []byte{},
-				MMREntryFields: nil,
-				MerkleLogCommit: &assets.MerkleLogCommit{
+				appID:          "event/7189fa3d-9af1-40b1-975c-70f792142a82",
+				logID:          []byte{},
+				mmrEntryFields: nil,
+				merkleLogCommit: &assets.MerkleLogCommit{
 					Index:       uint64(0),
 					Idtimestamp: "018fa97ef269039b00",
 				},
@@ -65,10 +65,10 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 			// NOTE: this can happen if the commit is empty, so covers that case as well
 			name: "missing idtimestamp returns specific error",
 			fields: fields{
-				AppId:          "event/7189fa3d-9af1-40b1-975c-70f792142a82",
-				LogId:          []byte{0, 110, 33, 215, 99, 215, 71, 187, 154, 126, 13, 181, 86, 33, 49, 127}, // tenant/006e21d7-63d7-47bb-9a7e-0db55621317f
-				MMREntryFields: nil,
-				MerkleLogCommit: &assets.MerkleLogCommit{
+				appID:          "event/7189fa3d-9af1-40b1-975c-70f792142a82",
+				logID:          []byte{0, 110, 33, 215, 99, 215, 71, 187, 154, 126, 13, 181, 86, 33, 49, 127}, // tenant/006e21d7-63d7-47bb-9a7e-0db55621317f
+				mmrEntryFields: nil,
+				merkleLogCommit: &assets.MerkleLogCommit{
 					Index:       uint64(0),
 					Idtimestamp: "",
 				},
@@ -80,11 +80,11 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &app.AssetsV2AppEntry{
 				AppEntry: app.NewAppEntry(
-					tt.fields.AppId,
-					tt.fields.LogId,
+					tt.fields.appID,
+					tt.fields.logID,
 					[]byte{},
-					tt.fields.MMREntryFields,
-					tt.fields.MerkleLogCommit),
+					tt.fields.mmrEntryFields,
+					tt.fields.merkleLogCommit),
 			}
 
 			err := Validate(e)
