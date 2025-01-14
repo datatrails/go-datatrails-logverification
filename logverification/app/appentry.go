@@ -43,6 +43,8 @@ import (
 const (
 	MMRSaltSize = 32
 
+	ExtraBytesSize = 24
+
 	IDTimestapSizeBytes = 8
 )
 
@@ -229,7 +231,7 @@ func (ve *AppEntry) MMRSalt() ([]byte, error) {
 
 	mmrSalt := make([]byte, MMRSaltSize)
 
-	copy(mmrSalt[:24], ve.extraBytes)
+	copy(mmrSalt[:ExtraBytesSize], ve.extraBytes)
 
 	// get the byte representation of idtimestamp
 	idTimestamp, _, err := massifs.SplitIDTimestampHex(ve.merkleLogCommit.Idtimestamp)
@@ -240,7 +242,7 @@ func (ve *AppEntry) MMRSalt() ([]byte, error) {
 	idTimestampBytes := make([]byte, IDTimestapSizeBytes)
 	binary.BigEndian.PutUint64(idTimestampBytes, idTimestamp)
 
-	copy(mmrSalt[24:], idTimestampBytes)
+	copy(mmrSalt[ExtraBytesSize:], idTimestampBytes)
 
 	return mmrSalt, nil
 }

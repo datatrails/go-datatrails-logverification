@@ -20,8 +20,6 @@ const (
 
 	// EventsV1AppDomain is the events v1 app domain
 	EventsV1AppDomain = byte(1)
-
-	ExtraBytesSize = 24
 )
 
 // EventsV1AppEntry is the assetsv2 app provided data for a corresponding log entry.
