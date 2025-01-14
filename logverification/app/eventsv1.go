@@ -150,8 +150,3 @@ func NewEventsV1ExtraBytes(originTenant string) ([]byte, error) {
 
 	return extraBytes, nil
 }
-
-// GetAppEntry gets the verifiable app entry
-func (ve *EventsV1AppEntry) GetAppEntry() *AppEntry {
-	return ve.AppEntry
-}

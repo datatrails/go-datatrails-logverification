@@ -227,14 +227,14 @@ func (ae *AppEntry) Domain() byte {
 // MMRSalt is the datatrails provided fields included on the MMR Entry.
 //
 // this is (extrabytes | idtimestamp) for any apps that adhere to log entry version 1.
-func (ve *AppEntry) MMRSalt() ([]byte, error) {
+func (ae *AppEntry) MMRSalt() ([]byte, error) {
 
 	mmrSalt := make([]byte, MMRSaltSize)
 
-	copy(mmrSalt[:ExtraBytesSize], ve.extraBytes)
+	copy(mmrSalt[:ExtraBytesSize], ae.extraBytes)
 
 	// get the byte representation of idtimestamp
-	idTimestamp, _, err := massifs.SplitIDTimestampHex(ve.merkleLogCommit.Idtimestamp)
+	idTimestamp, _, err := massifs.SplitIDTimestampHex(ae.merkleLogCommit.Idtimestamp)
 	if err != nil {
 		return nil, err
 	}

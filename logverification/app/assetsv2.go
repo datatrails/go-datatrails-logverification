@@ -107,9 +107,9 @@ func NewAssetsV2AppEntry(eventJson []byte) (*AssetsV2AppEntry, error) {
 //
 // NOTE: the original event json isn't really serializedbytes, but the LogVersion0 hasher includes
 // the serialization.
-func (ve *AssetsV2AppEntry) MMREntry() ([]byte, error) {
+func (ae *AssetsV2AppEntry) MMREntry() ([]byte, error) {
 	hasher := LogVersion0Hasher{}
-	eventHash, err := hasher.HashEvent(ve.mmrEntryFields.serializedBytes)
+	eventHash, err := hasher.HashEvent(ae.mmrEntryFields.serializedBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func (ve *AssetsV2AppEntry) MMREntry() ([]byte, error) {
 // MMRSalt is the datatrails provided fields included on the MMR Entry.
 //
 // For assetsv2 events this is empty.
-func (ve *AssetsV2AppEntry) MMRSalt() ([]byte, error) {
+func (ae *AssetsV2AppEntry) MMRSalt() ([]byte, error) {
 	return []byte{}, nil // MMRSalt is always empty for assetsv2 events
 }
 
@@ -167,9 +167,4 @@ func (ae *AssetsV2AppEntry) VerifyInclusion(options ...MassifGetterOption) (bool
 	}
 
 	return ae.VerifyProof(proof, WithMassifContext(massif))
-}
-
-// GetAppEntry gets the generic app entry.
-func (ve *AssetsV2AppEntry) GetAppEntry() *AppEntry {
-	return ve.AppEntry
 }
