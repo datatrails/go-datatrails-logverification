@@ -31,7 +31,7 @@ func serializeTestEvents(t *testing.T, events []*assets.EventResponse) []byte {
 
 // protoEventsToVerifiableEvents converts from he internally used proto EventResponse type
 // that our event generator returns, to the VerifiableEvent expected by logverification.
-func protoEventsToVerifiableEvents(t *testing.T, events []*assets.EventResponse) []*app.AssetsV2AppEntry {
+func protoEventsToVerifiableEvents(t *testing.T, events []*assets.EventResponse) []app.VerifiableAppEntry {
 	eventJsonList := serializeTestEvents(t, events)
 	result, err := app.NewAssetsV2AppEntries(eventJsonList)
 	require.NoError(t, err)
@@ -133,7 +133,7 @@ func TestVerifyList_TamperedEventContent_ShouldError(t *testing.T) {
 	events := protoEventsToVerifiableEvents(t, generatedEvents)
 	_, err := VerifyList(testContext.Storer, events)
 
-	require.ErrorIs(t, err, ErrEventNotOnLeaf)
+	require.ErrorIs(t, err, ErrAppEntryNotOnLeaf)
 }
 
 // TestVerifyList_IntermediateNode_ShouldError shows that an extra event at an intermediate node position

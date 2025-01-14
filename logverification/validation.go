@@ -21,20 +21,16 @@ var (
 
 // Validate performs basic validation on the VerifiableEvent, ensuring that critical fields
 // are present.
-func Validate(appEntry *app.AssetsV2AppEntry) error {
-	if appEntry.AppId == "" {
+func Validate(appEntry app.AppEntryGetter) error {
+	if appEntry.AppID() == "" {
 		return ErrNonEmptyEventIDRequired
 	}
 
-	if len(appEntry.LogId) == 0 {
+	if len(appEntry.LogID()) == 0 {
 		return ErrNonEmptyTenantIDRequired
 	}
 
-	if appEntry.MerkleLogCommit == nil {
-		return ErrCommitEntryRequired
-	}
-
-	if appEntry.MerkleLogCommit.Idtimestamp == "" {
+	if appEntry.IDTimestamp() == "" {
 		return ErrIdTimestampRequired
 	}
 

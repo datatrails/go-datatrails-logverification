@@ -62,16 +62,7 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 			expectedErr: ErrNonEmptyTenantIDRequired,
 		},
 		{
-			name: "missing commit entry returns specific error",
-			fields: fields{
-				AppId:           "event/7189fa3d-9af1-40b1-975c-70f792142a82",
-				LogId:           []byte{0, 110, 33, 215, 99, 215, 71, 187, 154, 126, 13, 181, 86, 33, 49, 127}, // tenant/006e21d7-63d7-47bb-9a7e-0db55621317f
-				MMREntryFields:  nil,
-				MerkleLogCommit: nil,
-			},
-			expectedErr: ErrCommitEntryRequired,
-		},
-		{
+			// NOTE: this can happen if the commit is empty, so covers that case as well
 			name: "missing idtimestamp returns specific error",
 			fields: fields{
 				AppId:          "event/7189fa3d-9af1-40b1-975c-70f792142a82",
@@ -88,12 +79,12 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &app.AssetsV2AppEntry{
-				AppEntry: &app.AppEntry{
-					AppId:           tt.fields.AppId,
-					LogId:           tt.fields.LogId,
-					MMREntryFields:  tt.fields.MMREntryFields,
-					MerkleLogCommit: tt.fields.MerkleLogCommit,
-				},
+				AppEntry: app.NewAppEntry(
+					tt.fields.AppId,
+					tt.fields.LogId,
+					[]byte{},
+					tt.fields.MMREntryFields,
+					tt.fields.MerkleLogCommit),
 			}
 
 			err := Validate(e)

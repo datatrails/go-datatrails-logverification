@@ -23,7 +23,7 @@ type AssetsV2AppEntry struct {
 
 // NewAssetsV2AppEntries takes a list of events JSON (e.g. from the assetsv2 events list API), converts them
 // into AssetsV2AppEntries and then returns them sorted by ascending MMR index.
-func NewAssetsV2AppEntries(eventsJson []byte) ([]*AssetsV2AppEntry, error) {
+func NewAssetsV2AppEntries(eventsJson []byte) ([]VerifiableAppEntry, error) {
 	// get the event list out of events
 	eventListJson := struct {
 		Events []json.RawMessage `json:"events"`
@@ -34,7 +34,7 @@ func NewAssetsV2AppEntries(eventsJson []byte) ([]*AssetsV2AppEntry, error) {
 		return nil, err
 	}
 
-	events := []*AssetsV2AppEntry{}
+	events := []VerifiableAppEntry{}
 	for _, eventJson := range eventListJson.Events {
 		verifiableEvent, err := NewAssetsV2AppEntry(eventJson)
 		if err != nil {
@@ -46,7 +46,7 @@ func NewAssetsV2AppEntries(eventsJson []byte) ([]*AssetsV2AppEntry, error) {
 
 	// Sorting the events by MMR index guarantees that they're sorted in log append order.
 	sort.Slice(events, func(i, j int) bool {
-		return events[i].MerkleLogCommit.Index < events[j].MerkleLogCommit.Index
+		return events[i].MMRIndex() < events[j].MMRIndex()
 	})
 
 	return events, nil
@@ -89,14 +89,13 @@ func NewAssetsV2AppEntry(eventJson []byte) (*AssetsV2AppEntry, error) {
 
 	return &AssetsV2AppEntry{
 		AppEntry: &AppEntry{
-			AppId: entry.Identity,
-			LogId: logId[:],
-			MMREntryFields: &MMREntryFields{
-				Domain:          byte(0),
-				SerializedBytes: eventJson, // we cheat a bit here, because the eventJson isn't really serialized
+			appID: entry.Identity,
+			logID: logId[:],
+			mmrEntryFields: &MMREntryFields{
+				domain:          byte(0),
+				serializedBytes: eventJson, // we cheat a bit here, because the eventJson isn't really serialized
 			},
-			MerkleLogCommit:  merkleLog.Commit,
-			MerkleLogConfirm: merkleLog.Confirm,
+			merkleLogCommit: merkleLog.Commit,
 		},
 	}, nil
 }
@@ -110,7 +109,7 @@ func NewAssetsV2AppEntry(eventJson []byte) (*AssetsV2AppEntry, error) {
 // the serialization.
 func (ve *AssetsV2AppEntry) MMREntry() ([]byte, error) {
 	hasher := LogVersion0Hasher{}
-	eventHash, err := hasher.HashEvent(ve.MMREntryFields.SerializedBytes)
+	eventHash, err := hasher.HashEvent(ve.mmrEntryFields.serializedBytes)
 	if err != nil {
 		return nil, err
 	}

@@ -41,7 +41,7 @@ func (h *LogVersion0Hasher) HashEvent(eventJson []byte) ([]byte, error) {
 	}
 
 	// the idCommitted is in hex from the event, we need to convert it to uint64
-	idCommitted, _, err := massifs.SplitIDTimestampHex(assetsAppEntry.MerkleLogCommit.Idtimestamp)
+	idCommitted, _, err := massifs.SplitIDTimestampHex(assetsAppEntry.IDTimestamp())
 	if err != nil {
 		return nil, err
 	}

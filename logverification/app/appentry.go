@@ -46,14 +46,52 @@ const (
 	IDTimestapSizeBytes = 8
 )
 
+// AppEntryGetter gets fields from the app entry or derives
+//
+//	fields from the app entry.
+type AppEntryGetter interface {
+	AppID() string
+	LogID() []byte
+	LogTenant() (string, error)
+	ExtraBytes() []byte
+	SerializedBytes() []byte
+	Domain() byte
+
+	MMRIndex() uint64
+	IDTimestamp() string
+	MMRSalt() ([]byte, error)
+	MMREntry() ([]byte, error)
+}
+
+// AppEntryMassifGetter gets the massif for a specific app entry.
+type AppEntryMassifGetter interface {
+	Massif(options ...MassifGetterOption) (*massifs.MassifContext, error)
+}
+
+// AppEntryVerifier can be used to verify the inclusion of an app entry
+//
+//	against its corresponding log entry.
+type AppEntryVerifier interface {
+	Proof(options ...MassifGetterOption) ([][]byte, error)
+	VerifyProof(proof [][]byte, options ...MassifGetterOption) (bool, error)
+	VerifyInclusion(options ...MassifGetterOption) (bool, error)
+}
+
+// VerifiableAppEntry includes all methods that could be needed for a verifiable app entry.
+type VerifiableAppEntry interface {
+	AppEntryGetter
+	AppEntryMassifGetter
+	AppEntryVerifier
+}
+
 // MMREntryFields are the fields that when hashed result in the MMR Entry
 type MMREntryFields struct {
 
-	// Domain defines the hashing schema for the MMR Entry
-	Domain byte
+	// domain defines the hashing schema for the MMR Entry
+	domain byte
 
-	// SerializedBytes are app (customer) provided fields in the MMR Entry, serialized in a consistent way.
-	SerializedBytes []byte
+	// serializedBytes are app (customer) provided fields in the MMR Entry, serialized in a consistent way.
+	serializedBytes []byte
 }
 
 // AppEntry is the app provided data for a corresponding log entry.
@@ -63,23 +101,20 @@ type MMREntryFields struct {
 // NOTE: all fields are sourced from the app data, or derived from it.
 // NONE of the fields in an AppEntry are sourced from the log.
 type AppEntry struct {
-	// AppId is an identifier of the app committing the merkle log entry
-	AppId string
+	// appID is an identifier of the app committing the merkle log entry
+	appID string
 
-	// LogId is a uuid in byte form of the specific log identifier
-	LogId []byte
+	// logID is a uuid in byte form of the specific log identifier
+	logID []byte
 
-	// ExtraBytes are extrabytes provided by datatrails for the specific app
-	ExtraBytes []byte
+	// extraBytes are extrabytes provided by datatrails for the specific app
+	extraBytes []byte
 
 	// MMREntryFields used to determine the MMR Entry
-	MMREntryFields *MMREntryFields
+	mmrEntryFields *MMREntryFields
 
 	// MerkleLogCommit used to define information about the log entry
-	MerkleLogCommit *assets.MerkleLogCommit
-
-	// MerkleLogConfirm used to define information about the log seal
-	MerkleLogConfirm *assets.MerkleLogConfirm
+	merkleLogCommit *assets.MerkleLogCommit
 }
 
 // NewAppEntry creates a new app entry entry
@@ -91,15 +126,15 @@ func NewAppEntry(
 	merklelogCommit *assets.MerkleLogCommit,
 ) *AppEntry {
 
-	verifiableLogEntry := &AppEntry{
-		AppId:           appId,
-		LogId:           logId,
-		ExtraBytes:      extraBytes,
-		MMREntryFields:  mmrEntryFields,
-		MerkleLogCommit: merklelogCommit,
+	appEntry := &AppEntry{
+		appID:           appId,
+		logID:           logId,
+		extraBytes:      extraBytes,
+		mmrEntryFields:  mmrEntryFields,
+		merkleLogCommit: merklelogCommit,
 	}
 
-	return verifiableLogEntry
+	return appEntry
 }
 
 // MMREntry derives the mmr entry of the corresponding log entry from the app data.
@@ -111,7 +146,7 @@ func (ae *AppEntry) MMREntry() ([]byte, error) {
 	hasher := sha256.New()
 
 	// domain
-	hasher.Write([]byte{ae.MMREntryFields.Domain})
+	hasher.Write([]byte{ae.mmrEntryFields.domain})
 
 	// mmr salt
 	mmrSalt, err := ae.MMRSalt()
@@ -122,7 +157,7 @@ func (ae *AppEntry) MMREntry() ([]byte, error) {
 	hasher.Write(mmrSalt)
 
 	// serialized bytes
-	hasher.Write(ae.MMREntryFields.SerializedBytes)
+	hasher.Write(ae.mmrEntryFields.serializedBytes)
 
 	return hasher.Sum(nil), nil
 
@@ -130,7 +165,60 @@ func (ae *AppEntry) MMREntry() ([]byte, error) {
 
 // MMRIndex gets the mmr index of the corresponding log entry.
 func (ae *AppEntry) MMRIndex() uint64 {
-	return ae.MerkleLogCommit.Index
+
+	if ae.merkleLogCommit == nil {
+		return 0
+	}
+
+	return ae.merkleLogCommit.Index
+}
+
+// IDTimestamp gets the idtimestamp of the corresponding log entry.
+func (ae *AppEntry) IDTimestamp() string {
+
+	if ae.merkleLogCommit == nil {
+		return ""
+	}
+
+	return ae.merkleLogCommit.Idtimestamp
+}
+
+// AppID gets the app id of the corresponding log entry.
+func (ae *AppEntry) AppID() string {
+	return ae.appID
+}
+
+// LogID gets the log id of the corresponding log entry.
+func (ae *AppEntry) LogID() []byte {
+	return ae.logID
+}
+
+// LogTenant returns the Log tenant that committed this app entry to the log
+// as a tenant identity.
+func (ae *AppEntry) LogTenant() (string, error) {
+
+	logTenantUuid, err := uuid.FromBytes(ae.logID)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("tenant/%s", logTenantUuid.String()), nil
+
+}
+
+// ExtraBytes gets the extrabytes of the corresponding log entry.
+func (ae *AppEntry) ExtraBytes() []byte {
+	return ae.extraBytes
+}
+
+// SerializedBytes gets the serialized bytes used to derive the mmr entry.
+func (ae *AppEntry) SerializedBytes() []byte {
+	return ae.mmrEntryFields.serializedBytes
+}
+
+// Domain gets the domain byte used to derive the mmr entry.
+func (ae *AppEntry) Domain() byte {
+	return ae.mmrEntryFields.domain
 }
 
 // MMRSalt derives the MMR Salt of the corresponding log entry from the app data.
@@ -141,10 +229,10 @@ func (ve *AppEntry) MMRSalt() ([]byte, error) {
 
 	mmrSalt := make([]byte, MMRSaltSize)
 
-	copy(mmrSalt[:24], ve.ExtraBytes)
+	copy(mmrSalt[:24], ve.extraBytes)
 
 	// get the byte representation of idtimestamp
-	idTimestamp, _, err := massifs.SplitIDTimestampHex(ve.MerkleLogCommit.Idtimestamp)
+	idTimestamp, _, err := massifs.SplitIDTimestampHex(ve.merkleLogCommit.Idtimestamp)
 	if err != nil {
 		return nil, err
 	}
@@ -155,19 +243,6 @@ func (ve *AppEntry) MMRSalt() ([]byte, error) {
 	copy(mmrSalt[24:], idTimestampBytes)
 
 	return mmrSalt, nil
-}
-
-// LogTenant returns the Log tenant that committed this app entry to the log
-// as a tenant identity.
-func (ae *AppEntry) LogTenant() (string, error) {
-
-	logTenantUuid, err := uuid.FromBytes(ae.LogId)
-	if err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf("tenant/%s", logTenantUuid.String()), nil
-
 }
 
 /** Massif gets the massif context, for the massif of the corresponding log entry from the app data.
@@ -214,7 +289,7 @@ func (ae *AppEntry) Massif(options ...MassifGetterOption) (*massifs.MassifContex
 	// if the log identity is not given, attempt to find it from the logId
 	if massifOptions.TenantId == "" {
 		// find the tenant log from the logID
-		logUuid, err := uuid.FromBytes(ae.LogId)
+		logUuid, err := uuid.FromBytes(ae.logID)
 		if err != nil {
 			return nil, err
 		}
@@ -223,7 +298,7 @@ func (ae *AppEntry) Massif(options ...MassifGetterOption) (*massifs.MassifContex
 		logIdentity = fmt.Sprintf("tenant/%s", logUuid.String())
 	}
 
-	return Massif(ae.MerkleLogCommit.Index, massifReader, logIdentity, massifHeight)
+	return Massif(ae.merkleLogCommit.Index, massifReader, logIdentity, massifHeight)
 
 }
 

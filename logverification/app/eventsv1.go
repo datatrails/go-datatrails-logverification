@@ -31,7 +31,7 @@ type EventsV1AppEntry struct {
 
 // NewEventsV1AppEntries takes a list of events JSON (e.g. from the events list API), converts them
 // into EventsV1AppEntries and then returns them sorted by ascending MMR index.
-func NewEventsV1AppEntries(eventsJson []byte, logTenant string) ([]*EventsV1AppEntry, error) {
+func NewEventsV1AppEntries(eventsJson []byte, logTenant string) ([]VerifiableAppEntry, error) {
 	// get the event list out of events
 	eventListJson := struct {
 		Events []json.RawMessage `json:"events"`
@@ -42,7 +42,7 @@ func NewEventsV1AppEntries(eventsJson []byte, logTenant string) ([]*EventsV1AppE
 		return nil, err
 	}
 
-	events := []*EventsV1AppEntry{}
+	events := []VerifiableAppEntry{}
 	for _, eventJson := range eventListJson.Events {
 		verifiableEvent, err := NewEventsV1AppEntry(eventJson, logTenant)
 		if err != nil {
@@ -54,7 +54,7 @@ func NewEventsV1AppEntries(eventsJson []byte, logTenant string) ([]*EventsV1AppE
 
 	// Sorting the events by MMR index guarantees that they're sorted in log append order.
 	sort.Slice(events, func(i, j int) bool {
-		return events[i].MerkleLogCommit.Index < events[j].MerkleLogCommit.Index
+		return events[i].MMRIndex() < events[j].MMRIndex()
 	})
 
 	return events, nil
@@ -119,14 +119,14 @@ func NewEventsV1AppEntry(eventJson []byte, logTenant string) (*EventsV1AppEntry,
 
 	return &EventsV1AppEntry{
 		AppEntry: &AppEntry{
-			AppId: entry.Identity,
-			LogId: logId[:],
-			MMREntryFields: &MMREntryFields{
-				Domain:          byte(0),
-				SerializedBytes: serializedBytes,
+			appID: entry.Identity,
+			logID: logId[:],
+			mmrEntryFields: &MMREntryFields{
+				domain:          byte(0),
+				serializedBytes: serializedBytes,
 			},
-			ExtraBytes:      extraBytes,
-			MerkleLogCommit: merkleLogCommit,
+			extraBytes:      extraBytes,
+			merkleLogCommit: merkleLogCommit,
 		},
 	}, nil
 }
