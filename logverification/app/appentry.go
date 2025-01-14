@@ -273,8 +273,8 @@ func (ae *AppEntry) Massif(options ...MassifGetterOption) (*massifs.MassifContex
 
 	var massifReader MassifGetter
 	// now check if we have a massif reader
-	if massifOptions.massifReader != nil {
-		massifReader = massifOptions.massifReader
+	if massifOptions.massifGetter != nil {
+		massifReader = massifOptions.massifGetter
 	} else {
 		// otherwise use azblob reader to get it
 		if massifOptions.azblobReader == nil {

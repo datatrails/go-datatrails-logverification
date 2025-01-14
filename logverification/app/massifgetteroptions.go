@@ -15,7 +15,7 @@ type MassifGetterOptions struct {
 
 	azblobReader azblob.Reader
 
-	massifReader MassifGetter
+	massifGetter MassifGetter
 
 	massifContext *massifs.MassifContext
 }
@@ -33,7 +33,7 @@ func WithMassifContext(massifContext *massifs.MassifContext) MassifGetterOption 
 // to obtain the massif for the app entry.
 func WithMassifReader(massifReader MassifGetter, massifOpts ...MassifOption) MassifGetterOption {
 	return func(mo *MassifGetterOptions) {
-		mo.massifReader = massifReader
+		mo.massifGetter = massifReader
 		opts := ParseMassifOptions(massifOpts...)
 		mo.MassifOptions = &opts
 	}

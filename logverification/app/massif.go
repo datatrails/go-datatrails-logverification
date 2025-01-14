@@ -25,14 +25,14 @@ type MassifGetter interface {
 // Massif gets the massif (blob) that contains the given mmrIndex, from azure blob storage
 //
 //	defined by the azblob configuration.
-func Massif(mmrIndex uint64, massifReader MassifGetter, tenantId string, massifHeight uint8) (*massifs.MassifContext, error) {
+func Massif(mmrIndex uint64, massifGetter MassifGetter, tenantId string, massifHeight uint8) (*massifs.MassifContext, error) {
 
 	massifIndex := massifs.MassifIndexFromMMRIndex(massifHeight, mmrIndex)
 
 	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
 	defer cancel()
 
-	massif, err := massifReader.GetMassif(ctx, tenantId, massifIndex)
+	massif, err := massifGetter.GetMassif(ctx, tenantId, massifIndex)
 	if err != nil {
 		return nil, err
 	}
