@@ -1,6 +1,6 @@
 //go:build integration && azurite
 
-package logverification
+package app
 
 import (
 	"testing"
@@ -12,18 +12,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestVerifyEvent tests:
+// TestVerifyAssetsV2Event tests:
 //
 // An end to end run through of proof generation to proof verification
 //
 //	of an event stored on an emulated azure blob storage.
-func TestVerifyEvent(t *testing.T) {
+func TestVerifyAssetsV2Event(t *testing.T) {
 	tc, g, _ := integrationsupport.NewAzuriteTestContext(t, "TestVerify")
 
 	// use the same tenant ID for all events
 	tenantID := mmrtesting.DefaultGeneratorTenantIdentity
 
-	events := integrationsupport.GenerateTenantLog(&tc, g, 10, tenantID, true, integrationsupport.TestMassifHeight)
+	events := integrationsupport.GenerateTenantLog(&tc, g, 1, tenantID, true, integrationsupport.TestMassifHeight)
 	event := events[len(events)-1]
 
 	// convert the last event into json
@@ -31,14 +31,19 @@ func TestVerifyEvent(t *testing.T) {
 	eventJSON, err := marshaler.Marshal(event)
 	require.NoError(t, err)
 
-	verifiableEvent, err := NewVerifiableAssetsV2Event(eventJSON)
+	appEntry, err := NewAssetsV2AppEntry(eventJSON)
 	require.NoError(t, err)
 
 	// NOTE: we would usually use azblob.NewReaderNoAuth()
 	//       instead of tc.Storer. But the azurite emulator
 	//       doesn't allow for public reads, unlike actual
 	//       blob storage that does.
-	verified, err := VerifyEvent(tc.Storer, *verifiableEvent, WithMassifHeight(integrationsupport.TestMassifHeight))
+	verified, err := appEntry.VerifyInclusion(
+		WithAzblobReader(
+			tc.Storer,
+			WithMassifHeight(integrationsupport.TestMassifHeight),
+		),
+	)
 	require.NoError(t, err)
 	assert.Equal(t, true, verified)
 }

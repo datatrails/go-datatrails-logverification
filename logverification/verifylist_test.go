@@ -10,6 +10,7 @@ import (
 	"github.com/datatrails/go-datatrails-common-api-gen/attribute/v2/attribute"
 	"github.com/datatrails/go-datatrails-common/logger"
 	"github.com/datatrails/go-datatrails-logverification/integrationsupport"
+	"github.com/datatrails/go-datatrails-logverification/logverification/app"
 	"github.com/datatrails/go-datatrails-merklelog/mmrtesting"
 	"github.com/stretchr/testify/require"
 	// TestVerifyListIntegration demonstrates how to verify the completeness of a list of events against a
@@ -30,9 +31,9 @@ func serializeTestEvents(t *testing.T, events []*assets.EventResponse) []byte {
 
 // protoEventsToVerifiableEvents converts from he internally used proto EventResponse type
 // that our event generator returns, to the VerifiableEvent expected by logverification.
-func protoEventsToVerifiableEvents(t *testing.T, events []*assets.EventResponse) []VerifiableAssetsV2Event {
+func protoEventsToVerifiableEvents(t *testing.T, events []*assets.EventResponse) []app.VerifiableAppEntry {
 	eventJsonList := serializeTestEvents(t, events)
-	result, err := NewVerifiableAssetsV2Events(eventJsonList)
+	result, err := app.NewAssetsV2AppEntries(eventJsonList)
 	require.NoError(t, err)
 
 	return result
@@ -132,7 +133,7 @@ func TestVerifyList_TamperedEventContent_ShouldError(t *testing.T) {
 	events := protoEventsToVerifiableEvents(t, generatedEvents)
 	_, err := VerifyList(testContext.Storer, events)
 
-	require.ErrorIs(t, err, ErrEventNotOnLeaf)
+	require.ErrorIs(t, err, ErrAppEntryNotOnLeaf)
 }
 
 // TestVerifyList_IntermediateNode_ShouldError shows that an extra event at an intermediate node position
