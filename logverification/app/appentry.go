@@ -104,6 +104,13 @@ type MMREntryFields struct {
 	serializedBytes []byte
 }
 
+func NewMMREntryFields(domain byte, serializedBytes []byte) *MMREntryFields {
+	return &MMREntryFields{
+		domain:          domain,
+		serializedBytes: serializedBytes,
+	}
+}
+
 // AppEntry is the app provided data for a corresponding log entry.
 //
 // It contains key information for verifying inclusion of the corresponding log entry.

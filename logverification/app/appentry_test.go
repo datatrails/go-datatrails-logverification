@@ -125,7 +125,7 @@ func TestNewAppEntry(t *testing.T) {
 
 // TestAppEntry_MMRSalt tests:
 //
-// 1. Known Answer Test for MMRSalt for log version 0.
+// 1. Known Answer Test for MMRSalt for log version 1.
 func TestAppEntry_MMRSalt(t *testing.T) {
 
 	testMassifContext := testMassifContext(t)

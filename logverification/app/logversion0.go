@@ -36,8 +36,11 @@ func (h *LogVersion0Hasher) HashEvent(eventJson []byte, idTimestamp []byte) ([]b
 		return nil, err
 	}
 
+	idTimestampWithEpoch := []byte{0}
+	idTimestampWithEpoch = append(idTimestampWithEpoch, idTimestamp...)
+
 	// the idCommitted is in hex from the event, we need to convert it to uint64
-	idCommitted, _, err := massifs.SplitIDTimestampBytes(idTimestamp)
+	idCommitted, _, err := massifs.SplitIDTimestampBytes(idTimestampWithEpoch)
 	if err != nil {
 		return nil, err
 	}

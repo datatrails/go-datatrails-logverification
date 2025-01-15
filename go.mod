@@ -3,12 +3,12 @@ module github.com/datatrails/go-datatrails-logverification
 go 1.23.0
 
 require (
-	github.com/datatrails/go-datatrails-common v0.18.1
+	github.com/datatrails/go-common-avid-api/api v0.0.2
+	github.com/datatrails/go-datatrails-common v0.18.3
 	github.com/datatrails/go-datatrails-common-api-gen v0.6.1
 	github.com/datatrails/go-datatrails-merklelog/massifs v0.3.1
 	github.com/datatrails/go-datatrails-merklelog/mmr v0.1.1
 	github.com/datatrails/go-datatrails-merklelog/mmrtesting v0.1.0
-	github.com/datatrails/go-datatrails-serialization/eventsv1 v0.0.2
 	github.com/datatrails/go-datatrails-simplehash v0.0.5
 	github.com/google/uuid v1.6.0
 	github.com/stretchr/testify v1.10.0
@@ -52,12 +52,12 @@ require (
 	github.com/zeebo/bencode v1.0.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.25.0 // indirect
-	golang.org/x/net v0.27.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240701130421-f6361c86f094 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240701130421-f6361c86f094 // indirect
-	google.golang.org/grpc v1.65.0 // indirect
+	golang.org/x/crypto v0.26.0 // indirect
+	golang.org/x/net v0.28.0 // indirect
+	golang.org/x/sys v0.24.0 // indirect
+	golang.org/x/text v0.19.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20241104194629-dd2ea8efbc28 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241021214115-324edc3d5d38 // indirect
+	google.golang.org/grpc v1.67.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
