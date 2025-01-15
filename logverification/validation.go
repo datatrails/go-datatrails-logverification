@@ -31,10 +31,6 @@ func Validate(appEntry app.AppEntryGetter) error {
 		return ErrNonEmptyTenantIDRequired
 	}
 
-	if appEntry.IDTimestamp() == "" {
-		return ErrIdTimestampRequired
-	}
-
 	return nil
 }
 

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/datatrails/go-datatrails-logverification/logverification/app"
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
 )
 
@@ -39,18 +38,6 @@ func Massif(mmrIndex uint64, massifReader MassifGetter, tenantId string, massifH
 	}
 
 	return &massif, nil
-}
-
-// ChooseHashingSchema chooses the hashing schema based on the log version in the massif blob start record.
-// See [Massif Basic File Format](https://github.com/datatrails/epic-8120-scalable-proof-mechanisms/blob/main/mmr/forestrie-massifs.md#massif-basic-file-format)
-func ChooseHashingSchema(massifStart massifs.MassifStart) (EventHasher, error) {
-
-	switch massifStart.Version {
-	case 0:
-		return app.NewLogVersion0Hasher(), nil
-	default:
-		return nil, errors.New("no hashing scheme for log version")
-	}
 }
 
 // UpdateMassifContext, updates the given massifContext to the massif that stores

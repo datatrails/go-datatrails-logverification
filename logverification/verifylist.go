@@ -344,7 +344,7 @@ func VerifyAppEntryInList(
 		return Unknown, err
 	}
 
-	mmrEntry, err := appEntry.MMREntry()
+	mmrEntry, err := appEntry.MMREntry(app.WithMassifContext(massifContext))
 	if err != nil {
 		return Unknown, err
 	}

@@ -1,7 +1,6 @@
 package app
 
 import (
-	"github.com/datatrails/go-datatrails-common/azblob"
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
 )
 
@@ -12,8 +11,6 @@ import (
 // MassifGetterOptions how an app entry retrieves its massif
 type MassifGetterOptions struct {
 	*MassifOptions
-
-	azblobReader azblob.Reader
 
 	massifGetter MassifGetter
 
@@ -34,16 +31,6 @@ func WithMassifContext(massifContext *massifs.MassifContext) MassifGetterOption 
 func WithMassifReader(massifReader MassifGetter, massifOpts ...MassifOption) MassifGetterOption {
 	return func(mo *MassifGetterOptions) {
 		mo.massifGetter = massifReader
-		opts := ParseMassifOptions(massifOpts...)
-		mo.MassifOptions = &opts
-	}
-}
-
-// WithAzBlobReader is an option that ensures the given azblob reader is used
-// to obtain the massif for the app entry.
-func WithAzblobReader(azblobReader azblob.Reader, massifOpts ...MassifOption) MassifGetterOption {
-	return func(mo *MassifGetterOptions) {
-		mo.azblobReader = azblobReader
 		opts := ParseMassifOptions(massifOpts...)
 		mo.MassifOptions = &opts
 	}
