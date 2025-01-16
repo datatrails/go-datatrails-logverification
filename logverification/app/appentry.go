@@ -45,55 +45,6 @@ const (
 	IDTimestapSizeBytes = 8
 )
 
-// AppEntryGetter gets fields from the app entry or derives
-//
-//	fields from the app entry.
-type AppEntryGetter interface {
-	AppID() string
-	LogID() []byte
-	LogTenant() (string, error)
-	Domain() byte
-	SerializedBytes() []byte
-	MMRIndex() uint64
-
-	MMRSalt(options ...MassifGetterOption) ([]byte, error)
-}
-
-// MMREntryGetter gets an mmrEntry from the given serialized bytes and corresponding log entry
-type MMREntryGetter interface {
-	MMREntry(options ...MassifGetterOption) ([]byte, error)
-}
-
-// TrieEntryGetter gets the trie entry
-type TrieEntryGetter interface {
-	ExtraBytes(options ...MassifGetterOption) ([]byte, error)
-	IDTimestamp(options ...MassifGetterOption) ([]byte, error)
-	TrieEntry(options ...MassifGetterOption) ([]byte, error)
-}
-
-// AppEntryMassifGetter gets the massif for a specific app entry.
-type AppEntryMassifGetter interface {
-	Massif(options ...MassifGetterOption) (*massifs.MassifContext, error)
-}
-
-// AppEntryVerifier can be used to verify the inclusion of an app entry
-//
-//	against its corresponding log entry.
-type AppEntryVerifier interface {
-	Proof(options ...MassifGetterOption) ([][]byte, error)
-	VerifyProof(proof [][]byte, options ...MassifGetterOption) (bool, error)
-	VerifyInclusion(options ...MassifGetterOption) (bool, error)
-}
-
-// VerifiableAppEntry includes all methods that could be needed for a verifiable app entry.
-type VerifiableAppEntry interface {
-	AppEntryGetter
-	MMREntryGetter
-	TrieEntryGetter
-	AppEntryMassifGetter
-	AppEntryVerifier
-}
-
 // MMREntryFields are the fields that when hashed result in the MMR Entry
 type MMREntryFields struct {
 

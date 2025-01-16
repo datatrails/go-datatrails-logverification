@@ -109,17 +109,15 @@ func TestNewAppEntry(t *testing.T) {
 				test.args.mmrIndex,
 			)
 
-			appEntryGetter := AppEntryGetter(actual)
-
-			assert.Equal(t, test.expected.appID, appEntryGetter.AppID())
-			assert.Equal(t, test.expected.logID, appEntryGetter.LogID())
+			assert.Equal(t, test.expected.appID, actual.AppID())
+			assert.Equal(t, test.expected.logID, actual.LogID())
 
 			// mmr entry fields
-			assert.Equal(t, test.expected.mmrEntryFields.domain, appEntryGetter.Domain())
-			assert.Equal(t, test.expected.mmrEntryFields.serializedBytes, appEntryGetter.SerializedBytes())
+			assert.Equal(t, test.expected.mmrEntryFields.domain, actual.Domain())
+			assert.Equal(t, test.expected.mmrEntryFields.serializedBytes, actual.SerializedBytes())
 
 			// mmr index
-			assert.Equal(t, test.expected.mmrIndex, appEntryGetter.MMRIndex())
+			assert.Equal(t, test.expected.mmrIndex, actual.MMRIndex())
 
 		})
 	}

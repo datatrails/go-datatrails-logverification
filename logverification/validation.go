@@ -22,7 +22,7 @@ var (
 
 // Validate performs basic validation on the AppEntryGetter, ensuring that critical fields
 // are present.
-func Validate(appEntry app.AppEntryGetter) error {
+func Validate(appEntry app.AppEntry) error {
 	if appEntry.AppID() == "" {
 		return ErrNonEmptyAppIDRequired
 	}

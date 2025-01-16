@@ -70,7 +70,7 @@ func TestVerifiableEvent_Validate(t *testing.T) {
 				tt.fields.mmrEntryFields,
 				tt.fields.merkleLogCommit.Index)
 
-			err := Validate(e)
+			err := Validate(*e)
 			assert.ErrorIs(t, err, tt.expectedErr)
 		})
 	}
