@@ -4,9 +4,9 @@ package logverification
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
-	"github.com/datatrails/go-common-avid-api/api/tenancies/v1/tenancies"
 	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
 	"github.com/datatrails/go-datatrails-common-api-gen/attribute/v2/attribute"
 	"github.com/datatrails/go-datatrails-common/logger"
@@ -43,7 +43,7 @@ func protoEventsToVerifiableEvents(t *testing.T, events []*assets.EventResponse)
 		eventJson, err := marshaller.Marshal(event)
 		require.NoError(t, err)
 
-		tenantUUIDStr := tenancies.UuidFromIdentity(event.TenantIdentity)
+		tenantUUIDStr := strings.TrimPrefix(event.TenantIdentity, "/tenant")
 		tenantUUID, err := uuid.Parse(tenantUUIDStr)
 		require.NoError(t, err)
 

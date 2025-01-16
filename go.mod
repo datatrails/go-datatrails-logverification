@@ -3,7 +3,6 @@ module github.com/datatrails/go-datatrails-logverification
 go 1.23.0
 
 require (
-	github.com/datatrails/go-common-avid-api/api v0.0.2
 	github.com/datatrails/go-datatrails-common v0.18.3
 	github.com/datatrails/go-datatrails-common-api-gen v0.6.1
 	github.com/datatrails/go-datatrails-merklelog/massifs v0.3.1
