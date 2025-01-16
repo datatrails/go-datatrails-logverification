@@ -149,16 +149,6 @@ func NewAppEntry(
 	return appEntry
 }
 
-// MMRIndex gets the mmr index of the corresponding log entry.
-func (ae *AppEntry) MMRIndex() uint64 {
-	return ae.mmrIndex
-}
-
-// SerializedBytes gets the serialized bytes used to generate id of the corresponding mmr entry.
-func (ae *AppEntry) SerializedBytes() []byte {
-	return ae.mmrEntryFields.serializedBytes
-}
-
 // AppID gets the app id of the corresponding log entry.
 func (ae *AppEntry) AppID() string {
 	return ae.appID
@@ -167,6 +157,21 @@ func (ae *AppEntry) AppID() string {
 // LogID gets the log id of the corresponding log entry.
 func (ae *AppEntry) LogID() []byte {
 	return ae.logID
+}
+
+// Domain gets the domain byte used to derive the mmr entry.
+func (ae *AppEntry) Domain() byte {
+	return ae.mmrEntryFields.domain
+}
+
+// SerializedBytes gets the serialized bytes used to generate hash of the corresponding mmr entry.
+func (ae *AppEntry) SerializedBytes() []byte {
+	return ae.mmrEntryFields.serializedBytes
+}
+
+// MMRIndex gets the mmr index of the corresponding log entry.
+func (ae *AppEntry) MMRIndex() uint64 {
+	return ae.mmrIndex
 }
 
 // LogTenant returns the Log tenant that committed this app entry to the log
@@ -219,11 +224,6 @@ func (ae *AppEntry) IDTimestamp(options ...MassifGetterOption) ([]byte, error) {
 	}
 
 	return massifs.GetIdtimestamp(trieEntry, 0, 0), nil
-}
-
-// Domain gets the domain byte used to derive the mmr entry.
-func (ae *AppEntry) Domain() byte {
-	return ae.mmrEntryFields.domain
 }
 
 // MMRSalt derives the MMR Salt of the corresponding log entry from the app data.

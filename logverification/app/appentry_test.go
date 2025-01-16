@@ -14,6 +14,8 @@ import (
 //
 // the first entry is a known log version 0 entry
 // the seconds entry is a known log version 1 entry
+//
+// TODO: Add actual KAT data
 func testMassifContext(t *testing.T) *massifs.MassifContext {
 
 	start := massifs.MassifStart{
