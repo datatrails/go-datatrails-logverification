@@ -43,7 +43,7 @@ func protoEventsToVerifiableEvents(t *testing.T, events []*assets.EventResponse)
 		eventJson, err := marshaller.Marshal(event)
 		require.NoError(t, err)
 
-		tenantUUIDStr := strings.TrimPrefix(event.TenantIdentity, "/tenant")
+		tenantUUIDStr := strings.TrimPrefix(event.TenantIdentity, "tenant/")
 		tenantUUID, err := uuid.Parse(tenantUUIDStr)
 		require.NoError(t, err)
 
