@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/datatrails/go-common-avid-api/api/tenancies/v1/tenancies"
 	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
 	dtcose "github.com/datatrails/go-datatrails-common/cose"
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
@@ -113,7 +112,7 @@ func GenerateTenantLog(tc *mmrtesting.TestContext, g TestGenerator, eventTotal i
 			0, 0, 0, 0, 0, 0, 0, 0, // 24 bytes
 		}
 
-		tenantUUIDStr := tenancies.UuidFromIdentity(ev.TenantIdentity)
+		tenantUUIDStr := strings.TrimPrefix(ev.TenantIdentity, "tenant/")
 		tenantUUID, err := uuid.Parse(tenantUUIDStr)
 		require.NoError(tc.T, err)
 
