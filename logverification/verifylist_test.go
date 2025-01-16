@@ -33,9 +33,9 @@ func serializeTestEvents(t *testing.T, events []*assets.EventResponse) []byte {
 
 // protoEventsToVerifiableEvents converts from he internally used proto EventResponse type
 // that our event generator returns, to the VerifiableEvent expected by logverification.
-func protoEventsToVerifiableEvents(t *testing.T, events []*assets.EventResponse) []app.VerifiableAppEntry {
+func protoEventsToVerifiableEvents(t *testing.T, events []*assets.EventResponse) []app.AppEntry {
 
-	appEntries := []app.VerifiableAppEntry{}
+	appEntries := []app.AppEntry{}
 
 	for _, event := range events {
 
@@ -57,7 +57,7 @@ func protoEventsToVerifiableEvents(t *testing.T, events []*assets.EventResponse)
 			event.MerklelogEntry.Commit.Index,
 		)
 
-		appEntries = append(appEntries, appEntry)
+		appEntries = append(appEntries, *appEntry)
 
 	}
 
