@@ -281,12 +281,14 @@ func (ae *AppEntry) MMREntry(options ...MassifGetterOption) ([]byte, error) {
 	if logVersion0 {
 		hasher := LogVersion0Hasher{}
 
-		idTimestamp, err := ae.IDTimestamp(WithMassifContext(massifContext))
+		var idTimestamp []byte
+		idTimestamp, err = ae.IDTimestamp(WithMassifContext(massifContext))
 		if err != nil {
 			return nil, err
 		}
 
-		eventHash, err := hasher.HashEvent(ae.mmrEntryFields.serializedBytes, idTimestamp)
+		var eventHash []byte
+		eventHash, err = hasher.HashEvent(ae.mmrEntryFields.serializedBytes, idTimestamp)
 		if err != nil {
 			return nil, err
 		}

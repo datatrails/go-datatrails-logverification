@@ -113,10 +113,12 @@ func GenerateTenantLog(tc *mmrtesting.TestContext, g TestGenerator, eventTotal i
 		}
 
 		tenantUUIDStr := strings.TrimPrefix(ev.TenantIdentity, "tenant/")
-		tenantUUID, err := uuid.Parse(tenantUUIDStr)
+		var tenantUUID uuid.UUID
+		tenantUUID, err = uuid.Parse(tenantUUIDStr)
 		require.NoError(tc.T, err)
 
-		logID, err := tenantUUID.MarshalBinary()
+		var logID []byte
+		logID, err = tenantUUID.MarshalBinary()
 		require.NoError(tc.T, err)
 
 		// add the generated event to the mmr
