@@ -2,6 +2,7 @@ package app
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"testing"
 
@@ -39,29 +40,36 @@ func testMassifContext(t *testing.T) *massifs.MassifContext {
 
 	hasher := sha256.New()
 
-	idtimestampStr := "0x01931acb7b14043b00"
+	// KAT Data taken from an actual merklelog.
 
-	// convert idtimestamp from bytes to uint64
-	idTimestamp, _, err := massifs.SplitIDTimestampHex(idtimestampStr)
+	// Log Version 0 (AssetsV2)
+	_, err = testMassifContext.AddHashedLeaf(
+		hasher,
+		binary.BigEndian.Uint64([]byte{148, 111, 227, 95, 198, 1, 121, 0}),
+		[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		[]byte("tenant/112758ce-a8cb-4924-8df8-fcba1e31f8b0"),
+		[]byte("assets/899e00a2-29bc-4316-bf70-121ce2044472/events/450dce94-065e-4f6a-bf69-7b59f28716b6"),
+		[]byte{97, 231, 1, 42, 127, 20, 181, 70, 122, 134, 84, 231, 174, 117, 200, 148, 171, 205, 57, 146, 174, 48, 34, 30, 152, 215, 77, 3, 204, 14, 202, 57},
+	)
 	require.NoError(t, err)
 
-	extraBytes := []byte{1, // app domain
-		1, 2, 3, 4, 5, 6, 7, 8,
-		1, 2, 3, 4, 5, 6, 7, 8,
-		1, 2, 3, 4, 5, 6, 7} // 23 remaining bytes
-
-	mmrEntry := []byte{
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, // 32 byte hash
-	}
-
-	_, err = testMassifContext.AddHashedLeaf(hasher, idTimestamp, extraBytes, []byte("test"), []byte("events/1234"), mmrEntry)
+	// Log Version 1 (EventsV1)
+	_, err = testMassifContext.AddHashedLeaf(
+		hasher,
+		binary.BigEndian.Uint64([]byte{148, 112, 0, 54, 17, 1, 121, 0}),
+		[]byte{1, 17, 39, 88, 206, 168, 203, 73, 36, 141, 248, 252, 186, 30, 49, 248, 176, 0, 0, 0, 0, 0, 0, 0},
+		[]byte("tenant/112758ce-a8cb-4924-8df8-fcba1e31f8b0"),
+		[]byte("events/01947000-3456-780f-bfa9-29881e3bac88"),
+		[]byte{215, 191, 107, 210, 134, 10, 40, 56, 226, 71, 136, 164, 9, 118, 166, 159, 86, 31, 175, 135, 202, 115, 37, 151, 174, 118, 115, 113, 25, 16, 144, 250},
+	)
 	require.NoError(t, err)
+
+	// Intermediate Node Skipped
 
 	return testMassifContext
 }
+
+// TODO: Test inclusion proofs using the AppEntry methods with the KAT data.
 
 // TestNewAppEntry tests:
 //
