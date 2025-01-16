@@ -2,12 +2,8 @@ package app
 
 import (
 	"crypto/sha256"
-	"encoding/binary"
-	"errors"
 	"fmt"
 
-	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
-	"github.com/datatrails/go-datatrails-common/logger"
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
 	"github.com/datatrails/go-datatrails-merklelog/mmr"
 	"github.com/google/uuid"
@@ -48,52 +44,21 @@ const (
 	IDTimestapSizeBytes = 8
 )
 
-// AppEntryGetter gets fields from the app entry or derives
-//
-//	fields from the app entry.
-type AppEntryGetter interface {
-	AppID() string
-	LogID() []byte
-	LogTenant() (string, error)
-	ExtraBytes() []byte
-	SerializedBytes() []byte
-	Domain() byte
-
-	MMRIndex() uint64
-	IDTimestamp() string
-	MMRSalt() ([]byte, error)
-	MMREntry() ([]byte, error)
-}
-
-// AppEntryMassifGetter gets the massif for a specific app entry.
-type AppEntryMassifGetter interface {
-	Massif(options ...MassifGetterOption) (*massifs.MassifContext, error)
-}
-
-// AppEntryVerifier can be used to verify the inclusion of an app entry
-//
-//	against its corresponding log entry.
-type AppEntryVerifier interface {
-	Proof(options ...MassifGetterOption) ([][]byte, error)
-	VerifyProof(proof [][]byte, options ...MassifGetterOption) (bool, error)
-	VerifyInclusion(options ...MassifGetterOption) (bool, error)
-}
-
-// VerifiableAppEntry includes all methods that could be needed for a verifiable app entry.
-type VerifiableAppEntry interface {
-	AppEntryGetter
-	AppEntryMassifGetter
-	AppEntryVerifier
-}
-
 // MMREntryFields are the fields that when hashed result in the MMR Entry
 type MMREntryFields struct {
 
 	// domain defines the hashing schema for the MMR Entry
 	domain byte
 
-	// serializedBytes are app (customer) provided fields in the MMR Entry, serialized in a consistent way.
+	// serialized bytes is the serialized bytes that get hashed as part of the MMR Entry
 	serializedBytes []byte
+}
+
+func NewMMREntryFields(domain byte, serializedBytes []byte) *MMREntryFields {
+	return &MMREntryFields{
+		domain:          domain,
+		serializedBytes: serializedBytes,
+	}
 }
 
 // AppEntry is the app provided data for a corresponding log entry.
@@ -109,80 +74,29 @@ type AppEntry struct {
 	// logID is a uuid in byte form of the specific log identifier
 	logID []byte
 
-	// extraBytes are extrabytes provided by datatrails for the specific app
-	extraBytes []byte
-
 	// MMREntryFields used to determine the MMR Entry
 	mmrEntryFields *MMREntryFields
 
-	// MerkleLogCommit used to define information about the log entry
-	merkleLogCommit *assets.MerkleLogCommit
+	// mmrIndex of the corresponding log entry
+	mmrIndex uint64
 }
 
 // NewAppEntry creates a new app entry entry
 func NewAppEntry(
 	appId string,
 	logId []byte,
-	extraBytes []byte,
 	mmrEntryFields *MMREntryFields,
-	merklelogCommit *assets.MerkleLogCommit,
+	mmrIndex uint64,
 ) *AppEntry {
 
 	appEntry := &AppEntry{
-		appID:           appId,
-		logID:           logId,
-		extraBytes:      extraBytes,
-		mmrEntryFields:  mmrEntryFields,
-		merkleLogCommit: merklelogCommit,
+		appID:          appId,
+		logID:          logId,
+		mmrEntryFields: mmrEntryFields,
+		mmrIndex:       mmrIndex,
 	}
 
 	return appEntry
-}
-
-// MMREntry derives the mmr entry of the corresponding log entry from the app data.
-//
-// MMREntry is:
-//   - H( Domain | MMR Salt | Serialized Bytes)
-func (ae *AppEntry) MMREntry() ([]byte, error) {
-
-	hasher := sha256.New()
-
-	// domain
-	hasher.Write([]byte{ae.mmrEntryFields.domain})
-
-	// mmr salt
-	mmrSalt, err := ae.MMRSalt()
-	if err != nil {
-		return nil, err
-	}
-
-	hasher.Write(mmrSalt)
-
-	// serialized bytes
-	hasher.Write(ae.mmrEntryFields.serializedBytes)
-
-	return hasher.Sum(nil), nil
-
-}
-
-// MMRIndex gets the mmr index of the corresponding log entry.
-func (ae *AppEntry) MMRIndex() uint64 {
-
-	if ae.merkleLogCommit == nil {
-		return 0
-	}
-
-	return ae.merkleLogCommit.Index
-}
-
-// IDTimestamp gets the idtimestamp of the corresponding log entry.
-func (ae *AppEntry) IDTimestamp() string {
-
-	if ae.merkleLogCommit == nil {
-		return ""
-	}
-
-	return ae.merkleLogCommit.Idtimestamp
 }
 
 // AppID gets the app id of the corresponding log entry.
@@ -193,6 +107,21 @@ func (ae *AppEntry) AppID() string {
 // LogID gets the log id of the corresponding log entry.
 func (ae *AppEntry) LogID() []byte {
 	return ae.logID
+}
+
+// Domain gets the domain byte used to derive the mmr entry.
+func (ae *AppEntry) Domain() byte {
+	return ae.mmrEntryFields.domain
+}
+
+// SerializedBytes gets the serialized bytes used to generate hash of the corresponding mmr entry.
+func (ae *AppEntry) SerializedBytes() []byte {
+	return ae.mmrEntryFields.serializedBytes
+}
+
+// MMRIndex gets the mmr index of the corresponding log entry.
+func (ae *AppEntry) MMRIndex() uint64 {
+	return ae.mmrIndex
 }
 
 // LogTenant returns the Log tenant that committed this app entry to the log
@@ -208,115 +137,133 @@ func (ae *AppEntry) LogTenant() (string, error) {
 
 }
 
+// TrieEntry gets the corresponding log trie entry for the app entry.
+func (ae *AppEntry) TrieEntry(massifContext *massifs.MassifContext) ([]byte, error) {
+
+	trieEntry, err := massifContext.GetTrieEntry(ae.MMRIndex())
+	if err != nil {
+		return nil, err
+	}
+
+	return trieEntry, nil
+
+}
+
 // ExtraBytes gets the extrabytes of the corresponding log entry.
-func (ae *AppEntry) ExtraBytes() []byte {
-	return ae.extraBytes
+func (ae *AppEntry) ExtraBytes(massifContext *massifs.MassifContext) ([]byte, error) {
+
+	trieEntry, err := ae.TrieEntry(massifContext)
+	if err != nil {
+		return nil, err
+	}
+
+	return massifs.GetExtraBytes(trieEntry, 0, 0), nil
 }
 
-// SerializedBytes gets the serialized bytes used to derive the mmr entry.
-func (ae *AppEntry) SerializedBytes() []byte {
-	return ae.mmrEntryFields.serializedBytes
-}
+// IDTimestamp gets the idtimestamp of the corresponding log entry.
+func (ae *AppEntry) IDTimestamp(massifContext *massifs.MassifContext) ([]byte, error) {
 
-// Domain gets the domain byte used to derive the mmr entry.
-func (ae *AppEntry) Domain() byte {
-	return ae.mmrEntryFields.domain
+	trieEntry, err := ae.TrieEntry(massifContext)
+	if err != nil {
+		return nil, err
+	}
+
+	return massifs.GetIdtimestamp(trieEntry, 0, 0), nil
 }
 
 // MMRSalt derives the MMR Salt of the corresponding log entry from the app data.
 // MMRSalt is the datatrails provided fields included on the MMR Entry.
 //
 // this is (extrabytes | idtimestamp) for any apps that adhere to log entry version 1.
-func (ae *AppEntry) MMRSalt() ([]byte, error) {
+func (ae *AppEntry) MMRSalt(massifContext *massifs.MassifContext) ([]byte, error) {
 
 	mmrSalt := make([]byte, MMRSaltSize)
 
-	copy(mmrSalt[:ExtraBytesSize], ae.extraBytes)
-
-	// get the byte representation of idtimestamp
-	idTimestamp, _, err := massifs.SplitIDTimestampHex(ae.merkleLogCommit.Idtimestamp)
+	extraBytes, err := ae.ExtraBytes(massifContext)
 	if err != nil {
 		return nil, err
 	}
 
-	idTimestampBytes := make([]byte, IDTimestapSizeBytes)
-	binary.BigEndian.PutUint64(idTimestampBytes, idTimestamp)
+	idTimestamp, err := ae.IDTimestamp(massifContext)
+	if err != nil {
+		return nil, err
+	}
 
-	copy(mmrSalt[ExtraBytesSize:], idTimestampBytes)
+	copy(mmrSalt[:ExtraBytesSize], extraBytes)
+
+	copy(mmrSalt[ExtraBytesSize:], idTimestamp)
 
 	return mmrSalt, nil
 }
 
-/** Massif gets the massif context, for the massif of the corresponding log entry from the app data.
- *
- * The following massif options can be used, in priority order:
- *   - WithMassifContext
- *   - WithMassifReader
- *   - WithAzblobReader
- *
- * Example WithMassifReader:
- *
- * WithMassifReader(
- *   reader,
- *   WithMassifTenantId("tenant/foo"),
- *   WithMassifHeight(14),
- * )
- */
-func (ae *AppEntry) Massif(options ...MassifGetterOption) (*massifs.MassifContext, error) {
+// MMREntry derives the mmr entry of the corresponding log entry from the app data.
+//
+// MMREntry is:
+//   - H( Domain | MMR Salt | Serialized Bytes)
+//
+// The MMR Salt is sourced from the corresponding log entry
+func (ae *AppEntry) MMREntry(massifContext *massifs.MassifContext) ([]byte, error) {
 
-	massifOptions := ParseMassifGetterOptions(options...)
+	logVersion0 := true
 
-	// first check if the options give a massif context to use, and use that
-	if massifOptions.massifContext != nil {
-		return massifOptions.massifContext, nil
-	}
-
-	var massifReader MassifGetter
-	// now check if we have a massif reader
-	if massifOptions.massifGetter != nil {
-		massifReader = massifOptions.massifGetter
-	} else {
-		// otherwise use azblob reader to get it
-		if massifOptions.azblobReader == nil {
-			return nil, errors.New("no way of determining massif of app entry, please provide either a massif context, massif reader or azblob reader")
-		}
-
-		newMassifReader := massifs.NewMassifReader(logger.Sugar, massifOptions.azblobReader)
-		massifReader = &newMassifReader
-	}
-
-	massifHeight := massifOptions.MassifHeight
-
-	logIdentity := massifOptions.TenantId
-	// if the log identity is not given, attempt to find it from the logId
-	if massifOptions.TenantId == "" {
-		// find the tenant log from the logID
-		logUuid, err := uuid.FromBytes(ae.logID)
-		if err != nil {
-			return nil, err
-		}
-
-		// log identity is currently `tenant/logid`
-		logIdentity = fmt.Sprintf("tenant/%s", logUuid.String())
-	}
-
-	return Massif(ae.merkleLogCommit.Index, massifReader, logIdentity, massifHeight)
-
-}
-
-// Proof gets the inclusion proof of the corresponding log entry for the app data.
-func (ae *AppEntry) Proof(options ...MassifGetterOption) ([][]byte, error) {
-
-	massif, err := ae.Massif(options...)
-
+	extraBytes, err := ae.ExtraBytes(massifContext)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get the size of the complete tenant MMR
-	mmrSize := massif.RangeCount()
+	// the only implementation of log version 0 is assetsv2
+	//  so check for the assetsv2 app domain (0).
+	if extraBytes[0] != 0 {
+		logVersion0 = false
+	}
 
-	proof, err := mmr.InclusionProof(massif, mmrSize-1, ae.MMRIndex())
+	if logVersion0 {
+		hasher := LogVersion0Hasher{}
+
+		var idTimestamp []byte
+		idTimestamp, err = ae.IDTimestamp(massifContext)
+		if err != nil {
+			return nil, err
+		}
+
+		var eventHash []byte
+		eventHash, err = hasher.HashEvent(ae.mmrEntryFields.serializedBytes, idTimestamp)
+		if err != nil {
+			return nil, err
+		}
+
+		return eventHash, nil
+	}
+
+	// if we get here we know its a log version 1 entry
+
+	hasher := sha256.New()
+
+	// domain
+	hasher.Write([]byte{ae.mmrEntryFields.domain})
+
+	// mmr salt
+	mmrSalt, err := ae.MMRSalt(massifContext)
+	if err != nil {
+		return nil, err
+	}
+
+	hasher.Write(mmrSalt)
+
+	// serialized bytes
+	hasher.Write(ae.mmrEntryFields.serializedBytes)
+
+	return hasher.Sum(nil), nil
+
+}
+
+// Proof gets the inclusion proof of the corresponding log entry for the app data.
+func (ae *AppEntry) Proof(massifContext *massifs.MassifContext) ([][]byte, error) {
+
+	// Get the size of the complete tenant MMR
+	mmrSize := massifContext.RangeCount()
+
+	proof, err := mmr.InclusionProof(massifContext, mmrSize-1, ae.MMRIndex())
 	if err != nil {
 		return nil, err
 	}
@@ -325,25 +272,19 @@ func (ae *AppEntry) Proof(options ...MassifGetterOption) ([][]byte, error) {
 }
 
 // VerifyProof verifies the given inclusion proof of the corresponding log entry for the app data.
-func (ae *AppEntry) VerifyProof(proof [][]byte, options ...MassifGetterOption) (bool, error) {
-
-	massif, err := ae.Massif(options...)
-
-	if err != nil {
-		return false, err
-	}
+func (ae *AppEntry) VerifyProof(massifContext *massifs.MassifContext, proof [][]byte) (bool, error) {
 
 	// Get the size of the complete tenant MMR
-	mmrSize := massif.RangeCount()
+	mmrSize := massifContext.RangeCount()
 
 	hasher := sha256.New()
 
-	mmrEntry, err := ae.MMREntry()
+	mmrEntry, err := ae.MMREntry(massifContext)
 	if err != nil {
 		return false, err
 	}
 
-	return mmr.VerifyInclusion(massif, hasher, mmrSize, mmrEntry,
+	return mmr.VerifyInclusion(massifContext, hasher, mmrSize, mmrEntry,
 		ae.MMRIndex(), proof)
 
 }
@@ -352,18 +293,12 @@ func (ae *AppEntry) VerifyProof(proof [][]byte, options ...MassifGetterOption) (
 // against the corresponding log entry in immutable merkle log
 //
 // Returns true if the app entry is included on the log, otherwise false.
-func (ae *AppEntry) VerifyInclusion(options ...MassifGetterOption) (bool, error) {
+func (ae *AppEntry) VerifyInclusion(massifContext *massifs.MassifContext) (bool, error) {
 
-	massif, err := ae.Massif(options...)
-
+	proof, err := ae.Proof(massifContext)
 	if err != nil {
 		return false, err
 	}
 
-	proof, err := ae.Proof(WithMassifContext(massif))
-	if err != nil {
-		return false, err
-	}
-
-	return ae.VerifyProof(proof, WithMassifContext(massif))
+	return ae.VerifyProof(massifContext, proof)
 }

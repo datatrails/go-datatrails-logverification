@@ -28,11 +28,7 @@ func NewLogVersion0Hasher() *LogVersion0Hasher {
 //   - domain separator is 0 for plain leaf nodes (events)
 //   - id timestamp is the timestamp id found on the event merklelog entry
 //   - simplehashv3 is the datatrails simplehash v3 schema for hashing datatrails events
-func (h *LogVersion0Hasher) HashEvent(eventJson []byte) ([]byte, error) {
-	assetsAppEntry, err := NewAssetsV2AppEntry(eventJson)
-	if err != nil {
-		return nil, err
-	}
+func (h *LogVersion0Hasher) HashEvent(eventJson []byte, idTimestamp []byte) ([]byte, error) {
 
 	simplehashv3Hasher := simplehash.NewHasherV3()
 	v3Event, err := simplehash.V3FromEventJSON(eventJson)
@@ -40,8 +36,11 @@ func (h *LogVersion0Hasher) HashEvent(eventJson []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	idTimestampWithEpoch := []byte{0}
+	idTimestampWithEpoch = append(idTimestampWithEpoch, idTimestamp...)
+
 	// the idCommitted is in hex from the event, we need to convert it to uint64
-	idCommitted, _, err := massifs.SplitIDTimestampHex(assetsAppEntry.IDTimestamp())
+	idCommitted, _, err := massifs.SplitIDTimestampBytes(idTimestampWithEpoch)
 	if err != nil {
 		return nil, err
 	}

@@ -1,22 +1,77 @@
 package app
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"testing"
 
-	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
+	"github.com/datatrails/go-datatrails-merklelog/massifs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+// testMassifContext generates a massif context with 2 entries
+//
+// the first entry is a known log version 0 entry
+// the seconds entry is a known log version 1 entry
+//
+// TODO: Add actual KAT data
+func testMassifContext(t *testing.T) *massifs.MassifContext {
+
+	start := massifs.MassifStart{
+		MassifHeight: 3,
+	}
+
+	testMassifContext := &massifs.MassifContext{
+		Start: start,
+		LogBlobContext: massifs.LogBlobContext{
+			BlobPath: "test",
+			Tags:     map[string]string{},
+		},
+	}
+
+	data, err := start.MarshalBinary()
+	require.NoError(t, err)
+
+	testMassifContext.Data = append(data, testMassifContext.InitIndexData()...)
+
+	testMassifContext.Tags["firstindex"] = fmt.Sprintf("%016x", testMassifContext.Start.FirstIndex)
+
+	hasher := sha256.New()
+
+	idtimestampStr := "0x01931acb7b14043b00"
+
+	// convert idtimestamp from bytes to uint64
+	idTimestamp, _, err := massifs.SplitIDTimestampHex(idtimestampStr)
+	require.NoError(t, err)
+
+	extraBytes := []byte{1, // app domain
+		1, 2, 3, 4, 5, 6, 7, 8,
+		1, 2, 3, 4, 5, 6, 7, 8,
+		1, 2, 3, 4, 5, 6, 7} // 23 remaining bytes
+
+	mmrEntry := []byte{
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, // 32 byte hash
+	}
+
+	_, err = testMassifContext.AddHashedLeaf(hasher, idTimestamp, extraBytes, []byte("test"), []byte("events/1234"), mmrEntry)
+	require.NoError(t, err)
+
+	return testMassifContext
+}
 
 // TestNewAppEntry tests:
 //
 // 1. we can get all non derived fields for the app entry getter
 func TestNewAppEntry(t *testing.T) {
 	type args struct {
-		appId           string
-		logId           []byte
-		extraBytes      []byte
-		mmrEntryFields  *MMREntryFields
-		merklelogCommit *assets.MerkleLogCommit
+		appId          string
+		logId          []byte
+		mmrEntryFields *MMREntryFields
+		mmrIndex       uint64
 	}
 	tests := []struct {
 		name     string
@@ -28,36 +83,20 @@ func TestNewAppEntry(t *testing.T) {
 			args: args{
 				appId: "events/1234",
 				logId: []byte("1234"),
-				extraBytes: []byte{
-					0, 0, 0, 0, 0, 0, 0, 0,
-					0, 0, 0, 0, 0, 0, 0, 0,
-					0, 0, 0, 0, 0, 0, 0, 0,
-				}, // 24 bytes long
 				mmrEntryFields: &MMREntryFields{
 					domain:          0,
 					serializedBytes: []byte("its a me, an app entry"),
 				},
-				merklelogCommit: &assets.MerkleLogCommit{
-					Index:       16,
-					Idtimestamp: "0x1234",
-				},
+				mmrIndex: 16,
 			},
 			expected: &AppEntry{
 				appID: "events/1234",
 				logID: []byte("1234"),
-				extraBytes: []byte{
-					0, 0, 0, 0, 0, 0, 0, 0,
-					0, 0, 0, 0, 0, 0, 0, 0,
-					0, 0, 0, 0, 0, 0, 0, 0,
-				}, // 24 bytes long
 				mmrEntryFields: &MMREntryFields{
 					domain:          0,
 					serializedBytes: []byte("its a me, an app entry"),
 				},
-				merkleLogCommit: &assets.MerkleLogCommit{
-					Index:       16,
-					Idtimestamp: "0x1234",
-				},
+				mmrIndex: 16,
 			},
 		},
 	}
@@ -66,179 +105,33 @@ func TestNewAppEntry(t *testing.T) {
 			actual := NewAppEntry(
 				test.args.appId,
 				test.args.logId,
-				test.args.extraBytes,
 				test.args.mmrEntryFields,
-				test.args.merklelogCommit,
+				test.args.mmrIndex,
 			)
 
-			appEntryGetter := AppEntryGetter(actual)
-
-			assert.Equal(t, test.expected.appID, appEntryGetter.AppID())
-			assert.Equal(t, test.expected.logID, appEntryGetter.LogID())
-			assert.Equal(t, test.expected.extraBytes, appEntryGetter.ExtraBytes())
+			assert.Equal(t, test.expected.appID, actual.AppID())
+			assert.Equal(t, test.expected.logID, actual.LogID())
 
 			// mmr entry fields
-			assert.Equal(t, test.expected.mmrEntryFields.domain, appEntryGetter.Domain())
-			assert.Equal(t, test.expected.mmrEntryFields.serializedBytes, appEntryGetter.SerializedBytes())
+			assert.Equal(t, test.expected.mmrEntryFields.domain, actual.Domain())
+			assert.Equal(t, test.expected.mmrEntryFields.serializedBytes, actual.SerializedBytes())
 
-			// merklelog commit
-			assert.Equal(t, test.expected.merkleLogCommit.Index, appEntryGetter.MMRIndex())
-			assert.Equal(t, test.expected.merkleLogCommit.Idtimestamp, appEntryGetter.IDTimestamp())
+			// mmr index
+			assert.Equal(t, test.expected.mmrIndex, actual.MMRIndex())
 
-		})
-	}
-}
-
-// TestAppEntry_MMREntry tests:
-//
-// 1. Known Answer Test (KAT) for mmr entry for log version 1
-func TestAppEntry_MMREntry(t *testing.T) {
-	type fields struct {
-		extraBytes      []byte
-		mmrEntryFields  *MMREntryFields
-		merkleLogCommit *assets.MerkleLogCommit
-	}
-	tests := []struct {
-		name     string
-		fields   fields
-		expected []byte
-		err      error
-	}{
-		// TODO: Add test cases.
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-
-			ae := &AppEntry{
-				extraBytes:      test.fields.extraBytes,
-				mmrEntryFields:  test.fields.mmrEntryFields,
-				merkleLogCommit: test.fields.merkleLogCommit,
-			}
-			actual, err := ae.MMREntry()
-
-			assert.Equal(t, test.err, err)
-			assert.Equal(t, test.expected, actual)
-		})
-	}
-}
-
-// TestAppEntry_MMRIndex tests:
-//
-// 1. an index > 0 returns that index.
-// 2. an index == 0 returns 0.
-// 3. a nil merklelog commit returns 0.
-func TestAppEntry_MMRIndex(t *testing.T) {
-	type fields struct {
-		merkleLogCommit *assets.MerkleLogCommit
-	}
-	tests := []struct {
-		name     string
-		fields   fields
-		expected uint64
-	}{
-		{
-			name: "non 0 index",
-			fields: fields{
-				merkleLogCommit: &assets.MerkleLogCommit{
-					Index: 176,
-				},
-			},
-			expected: 176,
-		},
-		{
-			name: "0 index",
-			fields: fields{
-				merkleLogCommit: &assets.MerkleLogCommit{
-					Index: 0,
-				},
-			},
-			expected: 0,
-		},
-		{
-			name: "nil merklelog commit",
-			fields: fields{
-				merkleLogCommit: nil,
-			},
-			expected: 0,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-
-			ae := &AppEntry{
-				merkleLogCommit: test.fields.merkleLogCommit,
-			}
-
-			actual := ae.MMRIndex()
-
-			assert.Equal(t, test.expected, actual)
-		})
-	}
-}
-
-// TestAppEntry_IDTimestamp tests:
-//
-// 1. a non empty idtimestamp returns that idtimestamp.
-// 2. an empty idtimestamp returns "".
-// 3. a nil merklelog commit returns "".
-func TestAppEntry_IDTimestamp(t *testing.T) {
-	type fields struct {
-		merkleLogCommit *assets.MerkleLogCommit
-	}
-	tests := []struct {
-		name     string
-		fields   fields
-		expected string
-	}{
-		{
-			name: "non empty idtimestamp",
-			fields: fields{
-				merkleLogCommit: &assets.MerkleLogCommit{
-					Idtimestamp: "0x1234",
-				},
-			},
-			expected: "0x1234",
-		},
-		{
-			name: "empty idtimestamp",
-			fields: fields{
-				merkleLogCommit: &assets.MerkleLogCommit{
-					Idtimestamp: "",
-				},
-			},
-			expected: "",
-		},
-		{
-			name: "nil merklelog commit",
-			fields: fields{
-				merkleLogCommit: nil,
-			},
-			expected: "",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-
-			ae := &AppEntry{
-				merkleLogCommit: test.fields.merkleLogCommit,
-			}
-
-			actual := ae.IDTimestamp()
-
-			assert.Equal(t, test.expected, actual)
 		})
 	}
 }
 
 // TestAppEntry_MMRSalt tests:
 //
-// 1. Known Answer Test for MMRSalt for log version 0.
-// 2. Boundary overflow test for mmr salt values higher than 24 bytes
-// 3. Boundary underflow test for mmr salt values lower than 24 bytes
+// 1. Known Answer Test for MMRSalt for log version 1.
 func TestAppEntry_MMRSalt(t *testing.T) {
+
+	testMassifContext := testMassifContext(t)
+
 	type fields struct {
-		extraBytes      []byte
-		merkleLogCommit *assets.MerkleLogCommit
+		mmrIndex uint64
 	}
 	tests := []struct {
 		name     string
@@ -249,63 +142,13 @@ func TestAppEntry_MMRSalt(t *testing.T) {
 		{
 			name: "positive kat",
 			fields: fields{
-				extraBytes: []byte{
-					1, // app domain
-					1, 2, 3, 4, 5, 6, 7, 8,
-					1, 2, 3, 4, 5, 6, 7, 8,
-					1, 2, 3, 4, 5, 6, 7, // 23 remaining bytes
-				},
-				merkleLogCommit: &assets.MerkleLogCommit{
-					Idtimestamp: "0x01931acb7b14043b00",
-				},
+				mmrIndex: 0,
 			},
 			expected: []byte{
 				0x1, // app domain
 				0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
 				0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
 				0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, // remaining bytes
-				0x93, 0x1a, 0xcb, 0x7b, 0x14, 0x4, 0x3b, 0x0, // idtimestamp
-			},
-		},
-		{
-			name: "extrabyte overflow boundary",
-			fields: fields{
-				extraBytes: []byte{
-					1, // app domain
-					1, 2, 3, 4, 5, 6, 7, 8,
-					1, 2, 3, 4, 5, 6, 7, 8,
-					1, 2, 3, 4, 5, 6, 7, 8, // 24 remaining bytes (overflow by 1 byte)
-				},
-				merkleLogCommit: &assets.MerkleLogCommit{
-					Idtimestamp: "0x01931acb7b14043b00",
-				},
-			},
-			expected: []byte{
-				0x1, // app domain
-				0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
-				0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
-				0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, // remaining bytes
-				0x93, 0x1a, 0xcb, 0x7b, 0x14, 0x4, 0x3b, 0x0, // idtimestamp
-			},
-		},
-		{
-			name: "extrabyte underflow boundary",
-			fields: fields{
-				extraBytes: []byte{
-					1, // app domain
-					1, 2, 3, 4, 5, 6, 7, 8,
-					1, 2, 3, 4, 5, 6, 7, 8,
-					1, 2, 3, 4, 5, 6, // 22 remaining bytes (undeflow by 1 byte)
-				},
-				merkleLogCommit: &assets.MerkleLogCommit{
-					Idtimestamp: "0x01931acb7b14043b00",
-				},
-			},
-			expected: []byte{
-				0x1, // app domain
-				0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
-				0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
-				0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x0, // remaining bytes (expect last byte to be padded)
 				0x93, 0x1a, 0xcb, 0x7b, 0x14, 0x4, 0x3b, 0x0, // idtimestamp
 			},
 		},
@@ -313,11 +156,10 @@ func TestAppEntry_MMRSalt(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ae := &AppEntry{
-				extraBytes:      test.fields.extraBytes,
-				merkleLogCommit: test.fields.merkleLogCommit,
+				mmrIndex: test.fields.mmrIndex,
 			}
 
-			actual, err := ae.MMRSalt()
+			actual, err := ae.MMRSalt(testMassifContext)
 
 			assert.Equal(t, test.err, err)
 			assert.Equal(t, test.expected, actual)

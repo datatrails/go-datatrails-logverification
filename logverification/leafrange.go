@@ -15,7 +15,7 @@ import (
 //	events, that have been sorted from lowest mmr index to highest mmr index.
 //
 // Returns the lower and upper bound of the leaf indexes for the leaf range.
-func LeafRange(sortedEvents []app.VerifiableAppEntry) (uint64, uint64) {
+func LeafRange(sortedEvents []app.AppEntry) (uint64, uint64) {
 
 	lowerBoundMMRIndex := sortedEvents[0].MMRIndex()
 	lowerBoundLeafIndex := mmr.LeafCount(lowerBoundMMRIndex+1) - 1 // Note: LeafCount takes an mmrIndex here not a size

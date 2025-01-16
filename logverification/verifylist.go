@@ -170,7 +170,7 @@ var (
  *                  to be included on. E.g. the public tenant
  *                  for public events.
  */
-func VerifyList(reader azblob.Reader, appEntries []app.VerifiableAppEntry, options ...VerifyOption) ([]uint64, error) {
+func VerifyList(reader azblob.Reader, appEntries []app.AppEntry, options ...VerifyOption) ([]uint64, error) {
 
 	verifyOptions := ParseOptions(options...)
 
@@ -238,7 +238,7 @@ func VerifyList(reader azblob.Reader, appEntries []app.VerifiableAppEntry, optio
 func VerifyAppEntryInList(
 	hasher hash.Hash,
 	leafIndex uint64,
-	appEntry app.VerifiableAppEntry,
+	appEntry app.AppEntry,
 	reader massifs.MassifReader,
 	massifContext *massifs.MassifContext,
 	tenantID string,
@@ -344,7 +344,7 @@ func VerifyAppEntryInList(
 		return Unknown, err
 	}
 
-	mmrEntry, err := appEntry.MMREntry()
+	mmrEntry, err := appEntry.MMREntry(massifContext)
 	if err != nil {
 		return Unknown, err
 	}

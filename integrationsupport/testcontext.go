@@ -15,6 +15,7 @@ import (
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
 	"github.com/datatrails/go-datatrails-merklelog/mmrtesting"
 	"github.com/datatrails/go-datatrails-simplehash/simplehash"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/veraison/go-cose"
 )
@@ -105,8 +106,23 @@ func GenerateTenantLog(tc *mmrtesting.TestContext, g TestGenerator, eventTotal i
 		// mmrIndex is equal to the count of all nodes
 		mmrIndex := mc.RangeCount()
 
+		extraBytes := []byte{
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, // 24 bytes
+		}
+
+		tenantUUIDStr := strings.TrimPrefix(ev.TenantIdentity, "tenant/")
+		var tenantUUID uuid.UUID
+		tenantUUID, err = uuid.Parse(tenantUUIDStr)
+		require.NoError(tc.T, err)
+
+		var logID []byte
+		logID, err = tenantUUID.MarshalBinary()
+		require.NoError(tc.T, err)
+
 		// add the generated event to the mmr
-		_, err1 = mc.AddHashedLeaf(sha256.New(), idTimestamp, nil, []byte(ev.TenantIdentity), []byte(ev.GetIdentity()), leafValue)
+		_, err1 = mc.AddHashedLeaf(sha256.New(), idTimestamp, extraBytes, logID, []byte(ev.GetIdentity()), leafValue)
 		if err1 != nil {
 			if errors.Is(err1, massifs.ErrMassifFull) {
 				var err2 error
