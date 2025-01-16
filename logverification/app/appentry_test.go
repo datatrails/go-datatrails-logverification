@@ -159,7 +159,7 @@ func TestAppEntry_MMRSalt(t *testing.T) {
 				mmrIndex: test.fields.mmrIndex,
 			}
 
-			actual, err := ae.MMRSalt(WithMassifContext(testMassifContext))
+			actual, err := ae.MMRSalt(testMassifContext)
 
 			assert.Equal(t, test.err, err)
 			assert.Equal(t, test.expected, actual)

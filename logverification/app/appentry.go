@@ -2,7 +2,6 @@ package app
 
 import (
 	"crypto/sha256"
-	"errors"
 	"fmt"
 
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
@@ -139,12 +138,7 @@ func (ae *AppEntry) LogTenant() (string, error) {
 }
 
 // TrieEntry gets the corresponding log trie entry for the app entry.
-func (ae *AppEntry) TrieEntry(options ...MassifGetterOption) ([]byte, error) {
-
-	massifContext, err := ae.Massif(options...)
-	if err != nil {
-		return nil, err
-	}
+func (ae *AppEntry) TrieEntry(massifContext *massifs.MassifContext) ([]byte, error) {
 
 	trieEntry, err := massifContext.GetTrieEntry(ae.MMRIndex())
 	if err != nil {
@@ -156,9 +150,9 @@ func (ae *AppEntry) TrieEntry(options ...MassifGetterOption) ([]byte, error) {
 }
 
 // ExtraBytes gets the extrabytes of the corresponding log entry.
-func (ae *AppEntry) ExtraBytes(options ...MassifGetterOption) ([]byte, error) {
+func (ae *AppEntry) ExtraBytes(massifContext *massifs.MassifContext) ([]byte, error) {
 
-	trieEntry, err := ae.TrieEntry(options...)
+	trieEntry, err := ae.TrieEntry(massifContext)
 	if err != nil {
 		return nil, err
 	}
@@ -167,9 +161,9 @@ func (ae *AppEntry) ExtraBytes(options ...MassifGetterOption) ([]byte, error) {
 }
 
 // IDTimestamp gets the idtimestamp of the corresponding log entry.
-func (ae *AppEntry) IDTimestamp(options ...MassifGetterOption) ([]byte, error) {
+func (ae *AppEntry) IDTimestamp(massifContext *massifs.MassifContext) ([]byte, error) {
 
-	trieEntry, err := ae.TrieEntry(options...)
+	trieEntry, err := ae.TrieEntry(massifContext)
 	if err != nil {
 		return nil, err
 	}
@@ -181,16 +175,16 @@ func (ae *AppEntry) IDTimestamp(options ...MassifGetterOption) ([]byte, error) {
 // MMRSalt is the datatrails provided fields included on the MMR Entry.
 //
 // this is (extrabytes | idtimestamp) for any apps that adhere to log entry version 1.
-func (ae *AppEntry) MMRSalt(options ...MassifGetterOption) ([]byte, error) {
+func (ae *AppEntry) MMRSalt(massifContext *massifs.MassifContext) ([]byte, error) {
 
 	mmrSalt := make([]byte, MMRSaltSize)
 
-	extraBytes, err := ae.ExtraBytes(options...)
+	extraBytes, err := ae.ExtraBytes(massifContext)
 	if err != nil {
 		return nil, err
 	}
 
-	idTimestamp, err := ae.IDTimestamp(options...)
+	idTimestamp, err := ae.IDTimestamp(massifContext)
 	if err != nil {
 		return nil, err
 	}
@@ -208,17 +202,11 @@ func (ae *AppEntry) MMRSalt(options ...MassifGetterOption) ([]byte, error) {
 //   - H( Domain | MMR Salt | Serialized Bytes)
 //
 // The MMR Salt is sourced from the corresponding log entry
-func (ae *AppEntry) MMREntry(options ...MassifGetterOption) ([]byte, error) {
+func (ae *AppEntry) MMREntry(massifContext *massifs.MassifContext) ([]byte, error) {
 
 	logVersion0 := true
 
-	// first find the log version
-	massifContext, err := ae.Massif(options...)
-	if err != nil {
-		return nil, err
-	}
-
-	extraBytes, err := ae.ExtraBytes(WithMassifContext(massifContext))
+	extraBytes, err := ae.ExtraBytes(massifContext)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +221,7 @@ func (ae *AppEntry) MMREntry(options ...MassifGetterOption) ([]byte, error) {
 		hasher := LogVersion0Hasher{}
 
 		var idTimestamp []byte
-		idTimestamp, err = ae.IDTimestamp(WithMassifContext(massifContext))
+		idTimestamp, err = ae.IDTimestamp(massifContext)
 		if err != nil {
 			return nil, err
 		}
@@ -255,7 +243,7 @@ func (ae *AppEntry) MMREntry(options ...MassifGetterOption) ([]byte, error) {
 	hasher.Write([]byte{ae.mmrEntryFields.domain})
 
 	// mmr salt
-	mmrSalt, err := ae.MMRSalt()
+	mmrSalt, err := ae.MMRSalt(massifContext)
 	if err != nil {
 		return nil, err
 	}
@@ -269,68 +257,13 @@ func (ae *AppEntry) MMREntry(options ...MassifGetterOption) ([]byte, error) {
 
 }
 
-/** Massif gets the massif context, for the massif of the corresponding log entry from the app data.
- *
- * The following massif options can be used, in priority order:
- *   - WithMassifContext
- *   - WithMassifReader
- *
- * Example WithMassifReader:
- *
- * WithMassifReader(
- *   reader,
- *   WithMassifTenantId("tenant/foo"),
- *   WithMassifHeight(14),
- * )
- */
-func (ae *AppEntry) Massif(options ...MassifGetterOption) (*massifs.MassifContext, error) {
-
-	massifOptions := ParseMassifGetterOptions(options...)
-
-	// first check if the options give a massif context to use, and use that
-	if massifOptions.massifContext != nil {
-		return massifOptions.massifContext, nil
-	}
-
-	// now check if we have a massif reader
-	if massifOptions.massifGetter == nil {
-		return nil, errors.New("no way of determining massif of app entry, please provide either a massif context or massif getter")
-
-	}
-
-	massifReader := massifOptions.massifGetter
-	massifHeight := massifOptions.MassifHeight
-
-	logIdentity := massifOptions.TenantId
-	// if the log identity is not given, attempt to find it from the logId
-	if massifOptions.TenantId == "" {
-		// find the tenant log from the logID
-		logUuid, err := uuid.FromBytes(ae.logID)
-		if err != nil {
-			return nil, err
-		}
-
-		// log identity is currently `tenant/logid`
-		logIdentity = fmt.Sprintf("tenant/%s", logUuid.String())
-	}
-
-	return Massif(ae.mmrIndex, massifReader, logIdentity, massifHeight)
-
-}
-
 // Proof gets the inclusion proof of the corresponding log entry for the app data.
-func (ae *AppEntry) Proof(options ...MassifGetterOption) ([][]byte, error) {
-
-	massif, err := ae.Massif(options...)
-
-	if err != nil {
-		return nil, err
-	}
+func (ae *AppEntry) Proof(massifContext *massifs.MassifContext) ([][]byte, error) {
 
 	// Get the size of the complete tenant MMR
-	mmrSize := massif.RangeCount()
+	mmrSize := massifContext.RangeCount()
 
-	proof, err := mmr.InclusionProof(massif, mmrSize-1, ae.MMRIndex())
+	proof, err := mmr.InclusionProof(massifContext, mmrSize-1, ae.MMRIndex())
 	if err != nil {
 		return nil, err
 	}
@@ -339,25 +272,19 @@ func (ae *AppEntry) Proof(options ...MassifGetterOption) ([][]byte, error) {
 }
 
 // VerifyProof verifies the given inclusion proof of the corresponding log entry for the app data.
-func (ae *AppEntry) VerifyProof(proof [][]byte, options ...MassifGetterOption) (bool, error) {
-
-	massif, err := ae.Massif(options...)
-
-	if err != nil {
-		return false, err
-	}
+func (ae *AppEntry) VerifyProof(massifContext *massifs.MassifContext, proof [][]byte) (bool, error) {
 
 	// Get the size of the complete tenant MMR
-	mmrSize := massif.RangeCount()
+	mmrSize := massifContext.RangeCount()
 
 	hasher := sha256.New()
 
-	mmrEntry, err := ae.MMREntry()
+	mmrEntry, err := ae.MMREntry(massifContext)
 	if err != nil {
 		return false, err
 	}
 
-	return mmr.VerifyInclusion(massif, hasher, mmrSize, mmrEntry,
+	return mmr.VerifyInclusion(massifContext, hasher, mmrSize, mmrEntry,
 		ae.MMRIndex(), proof)
 
 }
@@ -366,18 +293,12 @@ func (ae *AppEntry) VerifyProof(proof [][]byte, options ...MassifGetterOption) (
 // against the corresponding log entry in immutable merkle log
 //
 // Returns true if the app entry is included on the log, otherwise false.
-func (ae *AppEntry) VerifyInclusion(options ...MassifGetterOption) (bool, error) {
+func (ae *AppEntry) VerifyInclusion(massifContext *massifs.MassifContext) (bool, error) {
 
-	massif, err := ae.Massif(options...)
-
+	proof, err := ae.Proof(massifContext)
 	if err != nil {
 		return false, err
 	}
 
-	proof, err := ae.Proof(WithMassifContext(massif))
-	if err != nil {
-		return false, err
-	}
-
-	return ae.VerifyProof(proof, WithMassifContext(massif))
+	return ae.VerifyProof(massifContext, proof)
 }
