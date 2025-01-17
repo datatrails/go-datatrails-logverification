@@ -2,10 +2,12 @@ package app
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"testing"
 
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
+	"github.com/datatrails/go-datatrails-serialization/eventsv1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,8 +16,6 @@ import (
 //
 // the first entry is a known log version 0 entry
 // the seconds entry is a known log version 1 entry
-//
-// TODO: Add actual KAT data
 func testMassifContext(t *testing.T) *massifs.MassifContext {
 
 	start := massifs.MassifStart{
@@ -39,26 +39,31 @@ func testMassifContext(t *testing.T) *massifs.MassifContext {
 
 	hasher := sha256.New()
 
-	idtimestampStr := "0x01931acb7b14043b00"
+	// KAT Data taken from an actual merklelog.
 
-	// convert idtimestamp from bytes to uint64
-	idTimestamp, _, err := massifs.SplitIDTimestampHex(idtimestampStr)
+	// Log Version 0 (AssetsV2)
+	_, err = testMassifContext.AddHashedLeaf(
+		hasher,
+		binary.BigEndian.Uint64([]byte{148, 111, 227, 95, 198, 1, 121, 0}),
+		[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		[]byte("112758ce-a8cb-4924-8df8-fcba1e31f8b0"), // Tenant UUID
+		[]byte("assets/899e00a2-29bc-4316-bf70-121ce2044472/events/450dce94-065e-4f6a-bf69-7b59f28716b6"),
+		[]byte{97, 231, 1, 42, 127, 20, 181, 70, 122, 134, 84, 231, 174, 117, 200, 148, 171, 205, 57, 146, 174, 48, 34, 30, 152, 215, 77, 3, 204, 14, 202, 57},
+	)
 	require.NoError(t, err)
 
-	extraBytes := []byte{1, // app domain
-		1, 2, 3, 4, 5, 6, 7, 8,
-		1, 2, 3, 4, 5, 6, 7, 8,
-		1, 2, 3, 4, 5, 6, 7} // 23 remaining bytes
-
-	mmrEntry := []byte{
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, // 32 byte hash
-	}
-
-	_, err = testMassifContext.AddHashedLeaf(hasher, idTimestamp, extraBytes, []byte("test"), []byte("events/1234"), mmrEntry)
+	// Log Version 1 (EventsV1)
+	_, err = testMassifContext.AddHashedLeaf(
+		hasher,
+		binary.BigEndian.Uint64([]byte{148, 112, 0, 54, 17, 1, 121, 0}),
+		[]byte{1, 17, 39, 88, 206, 168, 203, 73, 36, 141, 248, 252, 186, 30, 49, 248, 176, 0, 0, 0, 0, 0, 0, 0},
+		[]byte("112758ce-a8cb-4924-8df8-fcba1e31f8b0"), // Tenant UUID
+		[]byte("events/01947000-3456-780f-bfa9-29881e3bac88"),
+		[]byte{215, 191, 107, 210, 134, 10, 40, 56, 226, 71, 136, 164, 9, 118, 166, 159, 86, 31, 175, 135, 202, 115, 37, 151, 174, 118, 115, 113, 25, 16, 144, 250},
+	)
 	require.NoError(t, err)
+
+	// Intermediate Node Skipped
 
 	return testMassifContext
 }
@@ -142,14 +147,13 @@ func TestAppEntry_MMRSalt(t *testing.T) {
 		{
 			name: "positive kat",
 			fields: fields{
-				mmrIndex: 0,
+				mmrIndex: 1, // Corresponds to a log version 1 entry
 			},
 			expected: []byte{
-				0x1, // app domain
-				0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
-				0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
-				0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, // remaining bytes
-				0x93, 0x1a, 0xcb, 0x7b, 0x14, 0x4, 0x3b, 0x0, // idtimestamp
+				1,                                                                       // App Domain
+				17, 39, 88, 206, 168, 203, 73, 36, 141, 248, 252, 186, 30, 49, 248, 176, // ExtraBytes
+				0, 0, 0, 0, 0, 0, 0, // ExtraBytes (padding)
+				148, 112, 0, 54, 17, 1, 121, 0, // IDTimestamp
 			},
 		},
 	}
@@ -165,4 +169,39 @@ func TestAppEntry_MMRSalt(t *testing.T) {
 			assert.Equal(t, test.expected, actual)
 		})
 	}
+}
+
+// TestAppEntry_VerifyInclusionLogVersion1 verifies that a proof can be generated and verified successfully
+// for log version 1
+func TestAppEntry_VerifyInclusionLogVersion1(t *testing.T) {
+	testMassifContext := testMassifContext(t)
+
+	serializedBytes, err := eventsv1.SerializeEventFromJson([]byte(logVersion1Event))
+	assert.NoError(t, err)
+
+	ae := &AppEntry{
+		mmrIndex:       1,
+		mmrEntryFields: NewMMREntryFields(0x0, serializedBytes),
+	}
+
+	inclusionVerified, err := ae.VerifyInclusion(testMassifContext)
+	assert.NoError(t, err)
+	assert.True(t, inclusionVerified)
+}
+
+// TestAppEntry_VerifyInclusionLogVersion0 verifies that a proof can be generated and verified successfully
+// for log version 0
+func TestAppEntry_VerifyInclusionLogVersion0(t *testing.T) {
+	testMassifContext := testMassifContext(t)
+
+	serializedBytes := []byte(logVersion0Event)
+
+	ae := &AppEntry{
+		mmrIndex:       0,
+		mmrEntryFields: NewMMREntryFields(0x0, serializedBytes),
+	}
+
+	inclusionVerified, err := ae.VerifyInclusion(testMassifContext)
+	assert.NoError(t, err)
+	assert.True(t, inclusionVerified)
 }
