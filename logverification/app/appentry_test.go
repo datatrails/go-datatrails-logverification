@@ -3,20 +3,22 @@ package app
 import (
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"testing"
 
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
+	"github.com/datatrails/go-datatrails-serialization/eventsv1"
+	"github.com/datatrails/go-datatrails-simplehash/simplehash"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zeebo/bencode"
 )
 
 // testMassifContext generates a massif context with 2 entries
 //
 // the first entry is a known log version 0 entry
 // the seconds entry is a known log version 1 entry
-//
-// TODO: Add actual KAT data
 func testMassifContext(t *testing.T) *massifs.MassifContext {
 
 	start := massifs.MassifStart{
@@ -150,14 +152,13 @@ func TestAppEntry_MMRSalt(t *testing.T) {
 		{
 			name: "positive kat",
 			fields: fields{
-				mmrIndex: 0,
+				mmrIndex: 1, // Corresponds to a log version 1 entry
 			},
 			expected: []byte{
-				0x1, // app domain
-				0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
-				0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8,
-				0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, // remaining bytes
-				0x93, 0x1a, 0xcb, 0x7b, 0x14, 0x4, 0x3b, 0x0, // idtimestamp
+				1,                                                                       // App Domain
+				17, 39, 88, 206, 168, 203, 73, 36, 141, 248, 252, 186, 30, 49, 248, 176, // ExtraBytes
+				0, 0, 0, 0, 0, 0, 0, // ExtraBytes (padding)
+				148, 112, 0, 54, 17, 1, 121, 0, // IDTimestamp
 			},
 		},
 	}
@@ -173,4 +174,50 @@ func TestAppEntry_MMRSalt(t *testing.T) {
 			assert.Equal(t, test.expected, actual)
 		})
 	}
+}
+
+// TestAppEntry_VerifyInclusionLogVersion1 verifies that a proof can be generated and verified successfully
+// for log version 1
+func TestAppEntry_VerifyInclusionLogVersion1(t *testing.T) {
+	testMassifContext := testMassifContext(t)
+
+	serializedBytes, err := eventsv1.SerializeEventFromJson([]byte(logVersion1Event))
+	assert.NoError(t, err)
+
+	ae := &AppEntry{
+		mmrIndex:       1,
+		mmrEntryFields: NewMMREntryFields(0x0, serializedBytes),
+	}
+
+	inclusionVerified, err := ae.VerifyInclusion(testMassifContext)
+	assert.NoError(t, err)
+	assert.True(t, inclusionVerified)
+}
+
+// TestAppEntry_VerifyInclusionLogVersion0 verifies that a proof can be generated and verified successfully
+// for log version 0
+func TestAppEntry_VerifyInclusionLogVersion0(t *testing.T) {
+	testMassifContext := testMassifContext(t)
+
+	v3event, err := simplehash.V3FromEventJSON([]byte(logVersion0Event))
+	assert.NoError(t, err)
+
+	eventJson, err := json.Marshal(v3event)
+	assert.NoError(t, err)
+
+	var jsonAny any
+	err = json.Unmarshal(eventJson, &jsonAny)
+	assert.NoError(t, err)
+
+	serializedBytes, err := bencode.EncodeBytes(jsonAny)
+	assert.NoError(t, err)
+
+	ae := &AppEntry{
+		mmrIndex:       0,
+		mmrEntryFields: NewMMREntryFields(0x0, serializedBytes),
+	}
+
+	inclusionVerified, err := ae.VerifyInclusion(testMassifContext)
+	assert.NoError(t, err)
+	assert.True(t, inclusionVerified)
 }
