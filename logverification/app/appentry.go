@@ -263,7 +263,7 @@ func (ae *AppEntry) Proof(massifContext *massifs.MassifContext) ([][]byte, error
 	// Get the size of the complete tenant MMR
 	mmrSize := massifContext.RangeCount()
 
-	proof, err := mmr.InclusionProof(massifContext, mmrSize, ae.MMRIndex())
+	proof, err := mmr.InclusionProof(massifContext, mmrSize-1, ae.MMRIndex())
 	if err != nil {
 		return nil, err
 	}
