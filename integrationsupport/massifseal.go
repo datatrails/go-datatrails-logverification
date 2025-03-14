@@ -44,7 +44,7 @@ func GenerateMassifSeal(t *testing.T, testContext mmrtesting.TestContext, lastEv
 	signer := massifs.NewRootSigner("foobar", codec)
 	coseSigner := azkeys.NewTestCoseSigner(t, signingKey)
 
-	pubKey, err := coseSigner.PublicKey()
+	pubKey, err := coseSigner.LatestPublicKey()
 	require.NoError(t, err)
 
 	signedRootState, err := signer.Sign1(coseSigner, coseSigner.KeyIdentifier(), pubKey, "subject", mmrState, nil)
