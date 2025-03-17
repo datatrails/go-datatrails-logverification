@@ -3,11 +3,11 @@ module github.com/datatrails/go-datatrails-logverification
 go 1.23.0
 
 require (
-	github.com/datatrails/go-datatrails-common v0.25.0
-	github.com/datatrails/go-datatrails-common-api-gen v0.6.1
-	github.com/datatrails/go-datatrails-merklelog/massifs v0.3.6
-	github.com/datatrails/go-datatrails-merklelog/mmr v0.1.1
-	github.com/datatrails/go-datatrails-merklelog/mmrtesting v0.1.0
+	github.com/datatrails/go-datatrails-common v0.25.2-0.20250318112229-3be5d902b136
+	github.com/datatrails/go-datatrails-common-api-gen v0.6.4
+	github.com/datatrails/go-datatrails-merklelog/massifs v0.3.7-0.20250318112801-c7a24fc5cb65
+	github.com/datatrails/go-datatrails-merklelog/mmr v0.1.2-0.20250318112801-c7a24fc5cb65
+	github.com/datatrails/go-datatrails-merklelog/mmrtesting v0.1.1-0.20250318112801-c7a24fc5cb65
 	github.com/datatrails/go-datatrails-serialization/eventsv1 v0.0.2
 	github.com/datatrails/go-datatrails-simplehash v0.0.5
 	github.com/google/uuid v1.6.0
@@ -42,15 +42,11 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.23.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/ldclabs/cose/go v0.0.0-20221214142927-d22c1cfc2154 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
-	github.com/opentracing-contrib/go-stdlib v1.0.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
-	github.com/openzipkin-contrib/zipkin-go-opentracing v0.5.0 // indirect
-	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
@@ -61,7 +57,7 @@ require (
 	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20241104194629-dd2ea8efbc28 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 // indirect
 	google.golang.org/grpc v1.69.0-dev // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
