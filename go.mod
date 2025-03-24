@@ -3,11 +3,11 @@ module github.com/datatrails/go-datatrails-logverification
 go 1.23.0
 
 require (
-	github.com/datatrails/go-datatrails-common v0.25.0
+	github.com/datatrails/go-datatrails-common v0.26.0
 	github.com/datatrails/go-datatrails-common-api-gen v0.6.1
-	github.com/datatrails/go-datatrails-merklelog/massifs v0.3.6
-	github.com/datatrails/go-datatrails-merklelog/mmr v0.1.1
-	github.com/datatrails/go-datatrails-merklelog/mmrtesting v0.1.0
+	github.com/datatrails/go-datatrails-merklelog/massifs v0.4.0
+	github.com/datatrails/go-datatrails-merklelog/mmr v0.2.0
+	github.com/datatrails/go-datatrails-merklelog/mmrtesting v0.2.0
 	github.com/datatrails/go-datatrails-serialization/eventsv1 v0.0.2
 	github.com/datatrails/go-datatrails-simplehash v0.0.5
 	github.com/google/uuid v1.6.0
