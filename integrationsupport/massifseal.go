@@ -7,7 +7,7 @@ import (
 
 	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
 	"github.com/datatrails/go-datatrails-common/azblob"
-	"github.com/datatrails/go-datatrails-common/azkeys"
+	"github.com/datatrails/go-datatrails-common/cose"
 	"github.com/datatrails/go-datatrails-common/logger"
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
 	"github.com/datatrails/go-datatrails-merklelog/mmr"
@@ -42,7 +42,7 @@ func GenerateMassifSeal(t *testing.T, testContext mmrtesting.TestContext, lastEv
 	require.Nil(t, err)
 
 	signer := massifs.NewRootSigner("foobar", codec)
-	coseSigner := azkeys.NewTestCoseSigner(t, signingKey)
+	coseSigner := cose.NewTestCoseSigner(t, signingKey)
 
 	pubKey, err := coseSigner.LatestPublicKey()
 	require.NoError(t, err)
