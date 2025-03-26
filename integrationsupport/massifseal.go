@@ -1,7 +1,6 @@
 package integrationsupport
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"testing"
 
@@ -21,7 +20,7 @@ func GenerateMassifSeal(t *testing.T, testContext mmrtesting.TestContext, lastEv
 	massifReader := massifs.NewMassifReader(logger.Sugar, testContext.Storer)
 
 	// Just handle a single massif for now
-	massifContext, err := massifReader.GetMassif(context.TODO(), mmrtesting.DefaultGeneratorTenantIdentity, 0)
+	massifContext, err := massifReader.GetMassif(t.Context(), mmrtesting.DefaultGeneratorTenantIdentity, 0)
 	require.Nil(t, err)
 
 	mmrSize := massifContext.RangeCount()
@@ -51,6 +50,6 @@ func GenerateMassifSeal(t *testing.T, testContext mmrtesting.TestContext, lastEv
 	require.Nil(t, err)
 
 	blobPath := massifs.TenantMassifSignedRootPath(mmrtesting.DefaultGeneratorTenantIdentity, 0)
-	_, err = testContext.Storer.Put(context.TODO(), blobPath, azblob.NewBytesReaderCloser(signedRootState))
+	_, err = testContext.Storer.Put(t.Context(), blobPath, azblob.NewBytesReaderCloser(signedRootState))
 	require.Nil(t, err)
 }

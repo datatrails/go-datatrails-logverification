@@ -46,6 +46,11 @@ tasks:
     cmds:
       - task: codequality:lint 
 
+  vulncheck:
+    desc: Vulnerability checks
+    cmds:
+      - task: codequality:vulncheck 
+
   go:modules:
     desc: tidies the go modules
     cmds: 
