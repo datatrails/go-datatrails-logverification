@@ -2,6 +2,8 @@ module github.com/datatrails/go-datatrails-logverification
 
 go 1.23.0
 
+toolchain go1.24.1
+
 require (
 	github.com/datatrails/go-datatrails-common v0.26.0
 	github.com/datatrails/go-datatrails-common-api-gen v0.6.1
@@ -13,7 +15,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/stretchr/testify v1.10.0
 	github.com/veraison/go-cose v1.1.0
-	google.golang.org/protobuf v1.35.2
+	google.golang.org/protobuf v1.36.6
 )
 
 require (
