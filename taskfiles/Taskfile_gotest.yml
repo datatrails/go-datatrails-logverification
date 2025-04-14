@@ -36,8 +36,9 @@ tasks:
               -v \
               -coverprofile={{.UNITTEST_DIR}}/main.out \
               ./... \
-              2>&1 | go-junit-report -set-exit-code -debug.print-events > {{.UNITTEST_DIR}}/main.xml
-
+              2>&1 > {{.UNITTEST_DIR}}/main.out
+            # gocov convert {{.UNITTEST_DIR}}/main.out > {{.UNITTEST_DIR}}/coverage.json
+            
   go:unit:
     desc: "run unit tests"
     dir: ../
@@ -57,4 +58,6 @@ tasks:
             -v \
             -coverprofile={{.UNITTEST_DIR}}/main.out \
             ./... \
-            2>&1 | go-junit-report -set-exit-code -debug.print-events > {{.UNITTEST_DIR}}/main.xml
+            2>&1 > {{.UNITTEST_DIR}}/main.out
+          # gocov convert {{.UNITTEST_DIR}}/main.out > {{.UNITTEST_DIR}}/coverage.json
+
