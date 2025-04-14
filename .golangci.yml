@@ -155,6 +155,7 @@ linters:
     - ireturn
     - maligned
     - maintidx
+    - mnd
     - misspell
     - musttag
     - nilerr
