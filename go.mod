@@ -6,7 +6,7 @@ require (
 	github.com/datatrails/go-datatrails-common v0.26.0
 	github.com/datatrails/go-datatrails-common-api-gen v0.6.6
 	github.com/datatrails/go-datatrails-merklelog/massifs v0.4.0
-	github.com/datatrails/go-datatrails-merklelog/mmr v0.2.0
+	github.com/datatrails/go-datatrails-merklelog/mmr v0.3.0
 	github.com/datatrails/go-datatrails-merklelog/mmrtesting v0.2.0
 	github.com/datatrails/go-datatrails-serialization/eventsv1 v0.0.2
 	github.com/datatrails/go-datatrails-simplehash v0.0.5
