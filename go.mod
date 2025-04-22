@@ -3,11 +3,11 @@ module github.com/datatrails/go-datatrails-logverification
 go 1.23.0
 
 require (
-	github.com/datatrails/go-datatrails-common v0.26.0
+	github.com/datatrails/go-datatrails-common v0.27.0
 	github.com/datatrails/go-datatrails-common-api-gen v0.6.6
 	github.com/datatrails/go-datatrails-merklelog/massifs v0.4.0
 	github.com/datatrails/go-datatrails-merklelog/mmr v0.2.0
-	github.com/datatrails/go-datatrails-merklelog/mmrtesting v0.2.0
+	github.com/datatrails/go-datatrails-merklelog/mmrtesting v0.4.0
 	github.com/datatrails/go-datatrails-serialization/eventsv1 v0.0.2
 	github.com/datatrails/go-datatrails-simplehash v0.0.5
 	github.com/google/uuid v1.6.0
@@ -21,9 +21,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.7.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.10.0 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus v1.7.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v0.4.1 // indirect
-	github.com/Azure/go-amqp v1.0.5 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
 	github.com/Azure/go-autorest/autorest v0.11.29 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.9.24 // indirect
