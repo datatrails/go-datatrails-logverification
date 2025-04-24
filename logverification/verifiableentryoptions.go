@@ -1,6 +1,6 @@
 package logverification
 
-import "github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
+import "github.com/datatrails/go-datatrails-simplehash/go-datatrails-common-api-gen/assets/v2/assets"
 
 /**
  * Options for creating Verifiable log entries.

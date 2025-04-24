@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
 	dtcose "github.com/datatrails/go-datatrails-common/cose"
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
 	"github.com/datatrails/go-datatrails-merklelog/mmrtesting"
+	"github.com/datatrails/go-datatrails-simplehash/go-datatrails-common-api-gen/assets/v2/assets"
 	"github.com/datatrails/go-datatrails-simplehash/simplehash"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"

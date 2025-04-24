@@ -7,12 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
-	"github.com/datatrails/go-datatrails-common-api-gen/attribute/v2/attribute"
 	"github.com/datatrails/go-datatrails-common/logger"
 	"github.com/datatrails/go-datatrails-logverification/integrationsupport"
 	"github.com/datatrails/go-datatrails-logverification/logverification/app"
 	"github.com/datatrails/go-datatrails-merklelog/mmrtesting"
+	"github.com/datatrails/go-datatrails-simplehash/go-datatrails-common-api-gen/assets/v2/assets"
+	"github.com/datatrails/go-datatrails-simplehash/go-datatrails-common-api-gen/attribute/v2/attribute"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	// TestVerifyListIntegration demonstrates how to verify the completeness of a list of events against a

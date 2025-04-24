@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"sort"
 
-	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
+	"github.com/datatrails/go-datatrails-simplehash/go-datatrails-common-api-gen/assets/v2/assets"
 	"github.com/datatrails/go-datatrails-simplehash/simplehash"
 	"google.golang.org/protobuf/encoding/protojson"
 )

@@ -3,8 +3,8 @@ package logverification
 import (
 	"testing"
 
-	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
 	"github.com/datatrails/go-datatrails-logverification/logverification/app"
+	"github.com/datatrails/go-datatrails-simplehash/go-datatrails-common-api-gen/assets/v2/assets"
 	"github.com/datatrails/go-datatrails-simplehash/simplehash"
 	"github.com/stretchr/testify/assert"
 )

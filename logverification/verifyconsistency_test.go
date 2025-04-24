@@ -10,11 +10,11 @@ import (
 	"hash"
 	"testing"
 
-	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
 	"github.com/datatrails/go-datatrails-common/cbor"
 	"github.com/datatrails/go-datatrails-common/cose"
 	"github.com/datatrails/go-datatrails-logverification/integrationsupport"
 	"github.com/datatrails/go-datatrails-merklelog/massifs"
+	"github.com/datatrails/go-datatrails-simplehash/go-datatrails-common-api-gen/assets/v2/assets"
 	"github.com/stretchr/testify/require"
 
 	"github.com/datatrails/go-datatrails-merklelog/mmrtesting"

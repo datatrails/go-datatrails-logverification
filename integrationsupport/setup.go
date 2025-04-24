@@ -3,7 +3,6 @@
 package integrationsupport
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"testing"
@@ -27,7 +26,7 @@ func SetupTest(t *testing.T, testContext mmrtesting.TestContext, testGenerator T
 	// Generate an initial batch of events. These are the last known backed-up events by the user.
 	eventsToAppend := 7
 	GenerateTenantLog(&testContext, testGenerator, eventsToAppend, tenantID, true, TestMassifHeight)
-	oldMassifContext, err := massifReader.GetMassif(context.TODO(), tenantID, 0)
+	oldMassifContext, err := massifReader.GetMassif(t.Context(), tenantID, 0)
 
 	expectedRangeCount := 11
 	require.Nil(t, err)
@@ -36,7 +35,7 @@ func SetupTest(t *testing.T, testContext mmrtesting.TestContext, testGenerator T
 	// Append 4 leaves to the existing Merkle log.
 	eventsToAppend = 4
 	appendedEvents := GenerateTenantLog(&testContext, testGenerator, eventsToAppend, tenantID, false, TestMassifHeight)
-	massifContext, err := massifReader.GetMassif(context.TODO(), tenantID, 0)
+	massifContext, err := massifReader.GetMassif(t.Context(), tenantID, 0)
 	require.Nil(t, err)
 
 	// Check that our test generation code actually appended it. Confirm that the old massif context
