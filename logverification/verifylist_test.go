@@ -4,13 +4,16 @@ package logverification
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/datatrails/go-datatrails-common-api-gen/assets/v2/assets"
 	"github.com/datatrails/go-datatrails-common-api-gen/attribute/v2/attribute"
 	"github.com/datatrails/go-datatrails-common/logger"
 	"github.com/datatrails/go-datatrails-logverification/integrationsupport"
+	"github.com/datatrails/go-datatrails-logverification/logverification/app"
 	"github.com/datatrails/go-datatrails-merklelog/mmrtesting"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	// TestVerifyListIntegration demonstrates how to verify the completeness of a list of events against a
 	// DataTrails Merkle log.
@@ -30,12 +33,35 @@ func serializeTestEvents(t *testing.T, events []*assets.EventResponse) []byte {
 
 // protoEventsToVerifiableEvents converts from he internally used proto EventResponse type
 // that our event generator returns, to the VerifiableEvent expected by logverification.
-func protoEventsToVerifiableEvents(t *testing.T, events []*assets.EventResponse) []VerifiableEvent {
-	eventJsonList := serializeTestEvents(t, events)
-	result, err := NewVerifiableEvents(eventJsonList)
-	require.NoError(t, err)
+func protoEventsToVerifiableEvents(t *testing.T, events []*assets.EventResponse) []app.AppEntry {
 
-	return result
+	appEntries := []app.AppEntry{}
+
+	for _, event := range events {
+
+		marshaller := assets.NewFlatMarshalerForEvents()
+		eventJson, err := marshaller.Marshal(event)
+		require.NoError(t, err)
+
+		tenantUUIDStr := strings.TrimPrefix(event.TenantIdentity, "tenant/")
+		tenantUUID, err := uuid.Parse(tenantUUIDStr)
+		require.NoError(t, err)
+
+		logID, err := tenantUUID.MarshalBinary()
+		require.NoError(t, err)
+
+		appEntry := app.NewAppEntry(
+			event.Identity,
+			logID,
+			app.NewMMREntryFields(0, eventJson),
+			event.MerklelogEntry.Commit.Index,
+		)
+
+		appEntries = append(appEntries, *appEntry)
+
+	}
+
+	return appEntries
 }
 
 func TestVerifyListIntegration(t *testing.T) {
@@ -132,7 +158,7 @@ func TestVerifyList_TamperedEventContent_ShouldError(t *testing.T) {
 	events := protoEventsToVerifiableEvents(t, generatedEvents)
 	_, err := VerifyList(testContext.Storer, events)
 
-	require.ErrorIs(t, err, ErrEventNotOnLeaf)
+	require.ErrorIs(t, err, ErrAppEntryNotOnLeaf)
 }
 
 // TestVerifyList_IntermediateNode_ShouldError shows that an extra event at an intermediate node position
